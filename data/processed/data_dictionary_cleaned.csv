@@ -1,0 +1,18 @@
+file,table_name,field,description
+Fire_area_prep_province.xlsx,Annual wildfire area,province,
+Fire_area_prep_province.xlsx,Annual wildfire area,year,
+Fire_area_prep_province.xlsx,Annual wildfire area,number_of_wildfire,"number of wildfire events, cummulative over one year"
+Fire_area_prep_province.xlsx,Annual wildfire area,total_area,"wildfire area in Rai (Thai unit), cummulative over one year"
+wildfire_causes.xlsx,Causes of wildfire,In the file,
+PM25_YEARLY.csv,PM2.5,province,
+PM25_YEARLY.csv,PM2.5,year,
+PM25_YEARLY.csv,PM2.5,total_count,cummulative counts over one year (counts= number of pixel of 10kmx10km)
+PM25_YEARLY.csv,PM2.5,PM25_dcount,Average daily PM2.5 over one year (microgram per cubicmeter)
+health_region.xlsx,Health region,year_c,
+health_region.xlsx,Health region,province,
+health_region.xlsx,Health region,province_en,
+health_region.xlsx,Health region,health_region,13 Thai health regions
+health_region.xlsx,Health region,pop,number of population at risk each year
+province_area.xlsx,Province area,year,
+province_area.xlsx,Province area,province,
+province_area.xlsx,Province area,area,Total area of each province (sq.km.)

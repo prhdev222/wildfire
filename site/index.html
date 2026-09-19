@@ -1,0 +1,1124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Thailand Wildfire Health Dashboard</title>
+    <script src="./data.js"></script>
+    <style>
+      :root {
+        --paper: #f7f4ed;
+        --paper-raised: #fffdf7;
+        --ash-line: rgba(60, 57, 48, 0.14);
+        --ash-line-strong: rgba(60, 57, 48, 0.28);
+        --ink: #24231f;
+        --ink-soft: #625e53;
+        --ink-faint: #918b7d;
+        --forest: #1f6650;
+        --water: #297a8c;
+        --ember: #c45833;
+        --saffron: #d69a2d;
+        --smoke: #d8d2c5;
+        --control: #efeadf;
+        --focus: rgba(196, 88, 51, 0.22);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        color: var(--ink);
+        background: var(--paper);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      .shell {
+        display: grid;
+        grid-template-columns: 260px minmax(0, 1fr);
+        min-height: 100vh;
+      }
+
+      aside {
+        border-right: 1px solid var(--ash-line);
+        padding: 24px 20px;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        background: rgba(247, 244, 237, 0.94);
+      }
+
+      main {
+        padding: 24px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 24px;
+        line-height: 1.08;
+        max-width: 12ch;
+      }
+
+      h2 {
+        font-size: 17px;
+      }
+
+      h3 {
+        font-size: 13px;
+        color: var(--ink-soft);
+        font-weight: 700;
+      }
+
+      .lede {
+        color: var(--ink-soft);
+        font-size: 13px;
+        line-height: 1.55;
+        margin-top: 14px;
+      }
+
+      .source-thumb {
+        border: 1px solid var(--ash-line);
+        width: 100%;
+        height: 86px;
+        object-fit: cover;
+        object-position: top left;
+        margin-top: 18px;
+        background: var(--paper-raised);
+      }
+
+      .controls {
+        display: grid;
+        gap: 14px;
+        margin-top: 26px;
+      }
+
+      label {
+        color: var(--ink-soft);
+        display: grid;
+        gap: 6px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      select {
+        width: 100%;
+        appearance: none;
+        border: 1px solid var(--ash-line);
+        border-radius: 6px;
+        background: var(--control);
+        color: var(--ink);
+        font: inherit;
+        min-height: 38px;
+        padding: 8px 10px;
+      }
+
+      select:focus {
+        border-color: var(--ember);
+        box-shadow: 0 0 0 4px var(--focus);
+        outline: none;
+      }
+
+      .story-band {
+        display: grid;
+        grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.7fr);
+        gap: 16px;
+        align-items: stretch;
+        margin-bottom: 16px;
+      }
+
+      .narrative {
+        background: var(--ink);
+        color: var(--paper);
+        border-radius: 8px;
+        padding: 18px;
+        min-height: 142px;
+        display: grid;
+        align-content: space-between;
+      }
+
+      .narrative p {
+        color: rgba(247, 244, 237, 0.78);
+        font-size: 14px;
+        line-height: 1.55;
+        margin-top: 8px;
+      }
+
+      .kpis {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .kpi,
+      .panel {
+        background: var(--paper-raised);
+        border: 1px solid var(--ash-line);
+        border-radius: 8px;
+      }
+
+      .kpi {
+        padding: 14px;
+        min-height: 66px;
+      }
+
+      .kpi .value {
+        font-size: 22px;
+        font-weight: 800;
+        line-height: 1.1;
+        margin-top: 5px;
+      }
+
+      .kpi .label {
+        color: var(--ink-soft);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 16px;
+      }
+
+      .panel {
+        padding: 16px;
+        min-height: 330px;
+      }
+
+      .panel.wide {
+        grid-column: 1 / -1;
+      }
+
+      .panel-head {
+        display: flex;
+        align-items: start;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .note {
+        color: var(--ink-faint);
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
+      svg {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .axis,
+      .grid-line {
+        stroke: var(--ash-line);
+        stroke-width: 1;
+      }
+
+      .tick {
+        fill: var(--ink-faint);
+        font-size: 11px;
+      }
+
+      .bar-label,
+      .point-label {
+        fill: var(--ink-soft);
+        font-size: 11px;
+      }
+
+      .bar-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .bar-row {
+        display: grid;
+        grid-template-columns: minmax(130px, 28%) minmax(80px, 1fr) 72px;
+        gap: 12px;
+        align-items: center;
+        min-height: 24px;
+      }
+
+      .bar-name {
+        color: var(--ink-soft);
+        font-size: 13px;
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+      }
+
+      .bar-track {
+        background: rgba(216, 210, 197, 0.55);
+        border-radius: 999px;
+        height: 18px;
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      .bar-fill {
+        border-radius: inherit;
+        height: 100%;
+        min-width: 2px;
+      }
+
+      .bar-value {
+        color: var(--ink-soft);
+        font-size: 13px;
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+      }
+
+      .tile-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(28px, 1fr));
+        gap: 5px;
+      }
+
+      .tile {
+        border: 1px solid rgba(36, 35, 31, 0.16);
+        border-radius: 4px;
+        aspect-ratio: 1;
+        min-width: 0;
+        cursor: default;
+      }
+
+      .legend {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 10px;
+        color: var(--ink-faint);
+        font-size: 11px;
+      }
+
+      .ramp {
+        height: 9px;
+        flex: 1;
+        border: 1px solid var(--ash-line);
+        background: linear-gradient(90deg, #eee8db, #d6a348, #be5634, #6d2f24);
+      }
+
+      .map-wrap {
+        display: grid;
+        grid-template-columns: minmax(260px, 0.78fr) minmax(220px, 0.22fr);
+        gap: 16px;
+        align-items: center;
+      }
+
+      .thai-map {
+        max-height: 620px;
+      }
+
+      .province-shape {
+        stroke: rgba(36, 35, 31, 0.36);
+        stroke-width: 0.55;
+        transition: fill 120ms ease, stroke 120ms ease;
+      }
+
+      .province-shape:hover {
+        stroke: var(--ink);
+        stroke-width: 1.4;
+      }
+
+      .map-note {
+        color: var(--ink-soft);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .map-note strong {
+        color: var(--ink);
+      }
+
+      .trend-explainer {
+        background: rgba(239, 234, 223, 0.72);
+        border: 1px solid var(--ash-line);
+        border-radius: 6px;
+        color: var(--ink-soft);
+        font-size: 13px;
+        line-height: 1.45;
+        margin-bottom: 14px;
+        padding: 10px 12px;
+      }
+
+      .trend-grid {
+        display: grid;
+        gap: 14px;
+      }
+
+      .trend-row {
+        display: grid;
+        grid-template-columns: 180px minmax(0, 1fr) 128px;
+        gap: 14px;
+        align-items: center;
+        border-top: 1px solid var(--ash-line);
+        padding-top: 12px;
+      }
+
+      .trend-row:first-child {
+        border-top: 0;
+        padding-top: 0;
+      }
+
+      .trend-title {
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .trend-sub {
+        color: var(--ink-faint);
+        font-size: 11px;
+        line-height: 1.35;
+        margin-top: 3px;
+      }
+
+      .trend-read {
+        color: var(--ink-soft);
+        font-size: 12px;
+        line-height: 1.35;
+        margin-top: 6px;
+      }
+
+      .trend-value {
+        color: var(--ink-soft);
+        font-size: 13px;
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--ash-line);
+        padding: 8px 6px;
+        text-align: right;
+        vertical-align: top;
+      }
+
+      th:first-child,
+      td:first-child {
+        text-align: left;
+      }
+
+      th {
+        color: var(--ink-soft);
+        font-size: 11px;
+      }
+
+      .pill-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .pill {
+        border: 1px solid var(--ash-line);
+        border-radius: 999px;
+        color: var(--ink-soft);
+        padding: 5px 8px;
+        font-size: 11px;
+        background: var(--control);
+      }
+
+      .footer {
+        color: var(--ink-faint);
+        font-size: 12px;
+        line-height: 1.5;
+        margin: 18px 0 4px;
+      }
+
+      @media (max-width: 980px) {
+        .shell {
+          grid-template-columns: 1fr;
+        }
+
+        aside {
+          height: auto;
+          position: static;
+          border-right: 0;
+          border-bottom: 1px solid var(--ash-line);
+        }
+
+        h1 {
+          max-width: none;
+        }
+
+        .controls {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .story-band,
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .map-wrap {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 620px) {
+        main {
+          padding: 14px;
+        }
+
+        .controls,
+        .kpis {
+          grid-template-columns: 1fr;
+        }
+
+        .panel {
+          padding: 12px;
+        }
+
+        .bar-row {
+          grid-template-columns: 1fr 64px;
+          gap: 6px 10px;
+        }
+
+        .bar-track {
+          grid-column: 1 / -1;
+          grid-row: 2;
+        }
+
+        .trend-row {
+          grid-template-columns: 1fr;
+          gap: 8px;
+        }
+
+        .trend-value {
+          text-align: left;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <aside>
+        <h1>Wildfire Health Atlas</h1>
+        <p class="lede">
+          Province-year evidence for wildfire pressure, PM2.5 exposure, and mental
+          health records in Thailand.
+        </p>
+        <img class="source-thumb" src="../description.jpg" alt="Dataset description preview" />
+        <div class="controls">
+          <label>
+            Year
+            <select id="yearSelect"></select>
+          </label>
+          <label>
+            Map Metric
+            <select id="metricSelect"></select>
+          </label>
+          <label>
+            Health Trend
+            <select id="healthSelect"></select>
+          </label>
+        </div>
+      </aside>
+
+      <main>
+        <section class="story-band">
+          <div class="narrative">
+            <div>
+              <h2 id="storyTitle"></h2>
+              <p id="storyText"></p>
+            </div>
+            <div class="pill-row" id="sourcePills"></div>
+          </div>
+          <div class="kpis" id="kpis"></div>
+        </section>
+
+        <section class="grid">
+          <article class="panel wide">
+            <div class="panel-head">
+              <div>
+                <h2>National Trend</h2>
+                <p class="note">เส้นนี้เป็นภาพรวมทั้งประเทศตามปี และจะไฮไลต์ปีที่เลือกจาก dropdown.</p>
+              </div>
+            </div>
+            <div id="trendChart"></div>
+          </article>
+
+          <article class="panel wide">
+            <div class="panel-head">
+              <div>
+                <h2>Thailand Province Map</h2>
+                <p class="note">สีเข้มหมายถึงค่าของตัวชี้วัดที่เลือกสูงกว่าในปีนั้น.</p>
+              </div>
+            </div>
+            <div id="mapChart"></div>
+            <div class="legend"><span>lower</span><span class="ramp"></span><span>higher</span></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Province Risk Grid</h2>
+                <p class="note">One tile per province, grouped by health region.</p>
+              </div>
+            </div>
+            <div id="tileGrid" class="tile-grid"></div>
+            <div class="legend"><span>lower</span><span class="ramp"></span><span>higher</span></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Top Provinces</h2>
+                <p class="note" id="rankNote"></p>
+              </div>
+            </div>
+            <div id="rankChart"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Wildfire and PM2.5</h2>
+                <p class="note">Bubble size follows the selected health rate.</p>
+              </div>
+            </div>
+            <div id="scatterChart"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Health Region Impact</h2>
+                <p class="note">Population-weighted rate per 100,000 people.</p>
+              </div>
+            </div>
+            <div id="regionChart"></div>
+          </article>
+
+          <article class="panel wide">
+            <div class="panel-head">
+              <div>
+                <h2>Wildfire Causes</h2>
+                <p class="note">National cause categories in long format from the source workbook.</p>
+              </div>
+            </div>
+            <div id="causeChart"></div>
+          </article>
+
+          <article class="panel wide">
+            <div class="panel-head">
+              <div>
+                <h2>Data Table</h2>
+                <p class="note" id="tableNote"></p>
+              </div>
+            </div>
+            <div id="tableWrap"></div>
+          </article>
+
+          <article class="panel wide">
+            <div class="panel-head">
+              <div>
+                <h2>Data Preparation Record</h2>
+                <p class="note">Cleaned outputs are saved in <code>data/processed</code>.</p>
+              </div>
+            </div>
+            <div id="prepRecord"></div>
+          </article>
+        </section>
+
+        <p class="footer">
+          This dashboard shows province-level annual patterns. It supports exploration, not
+          causal claims.
+        </p>
+      </main>
+    </div>
+
+    <script>
+      const DATA = window.WILDFIRE_DATA;
+      const rows = DATA.rows;
+      const causes = DATA.causes;
+      let provinceGeo = null;
+
+      const metricDefs = {
+        wildfire_area_rai: { label: "Wildfire area", unit: "rai", color: "#c45833" },
+        number_of_wildfire: { label: "Wildfire events", unit: "events", color: "#d69a2d" },
+        pm25_avg: { label: "PM2.5 average", unit: "µg/m³", color: "#297a8c" },
+        wildfire_area_percent: { label: "Burned share", unit: "% land", color: "#1f6650" },
+        depression_rate: { label: "Depression rate", unit: "/100k", color: "#6d5a8d", healthField: "depression" },
+        anxiety_rate: { label: "Anxiety rate", unit: "/100k", color: "#8a6f2a", healthField: "anxiety" },
+        suicide_rate: { label: "Suicide rate", unit: "/100k", color: "#7a3737", healthField: "suicide" },
+        total_mental_rate: { label: "Total mental health rate", unit: "/100k", color: "#405f7a", healthField: "total_mental_cases" },
+      };
+
+      const healthLabels = {
+        depression: "Depression",
+        anxiety: "Anxiety",
+        suicide: "Suicide",
+        alcoholism: "Alcoholism",
+        schizophrenia: "Schizophrenia",
+        amphetamine: "Amphetamine",
+        total_mental_cases: "Total mental cases",
+      };
+
+      const yearSelect = document.querySelector("#yearSelect");
+      const metricSelect = document.querySelector("#metricSelect");
+      const healthSelect = document.querySelector("#healthSelect");
+
+      const years = [...new Set(rows.map((d) => d.year).filter(Boolean))].sort((a, b) => a - b);
+      yearSelect.innerHTML = years.map((y) => `<option value="${y}">${y}</option>`).join("");
+      yearSelect.value = "2022";
+      metricSelect.innerHTML = Object.entries(metricDefs)
+        .map(([key, d]) => `<option value="${key}">${d.healthField ? "Mental health: " : "Map: "}${d.label}</option>`)
+        .join("");
+      healthSelect.innerHTML = Object.entries(healthLabels)
+        .map(([key, label]) => `<option value="${key}">${label}</option>`)
+        .join("");
+      healthSelect.value = "depression";
+
+      yearSelect.addEventListener("change", render);
+      healthSelect.addEventListener("change", render);
+      metricSelect.addEventListener("change", () => {
+        const field = metricDefs[metricSelect.value].healthField;
+        if (field) healthSelect.value = field;
+        render();
+      });
+
+      fetch("../data/geo/thailand_provinces.geojson")
+        .then((response) => response.json())
+        .then((geo) => {
+          provinceGeo = geo;
+          render();
+        })
+        .catch(() => {
+          document.querySelector("#mapChart").innerHTML =
+            '<p class="note">Map boundary file could not be loaded.</p>';
+        });
+
+      function n(value) {
+        return Number.isFinite(value) ? value : 0;
+      }
+
+      function fmt(value, digits = 0) {
+        if (!Number.isFinite(value)) return "n/a";
+        return value.toLocaleString(undefined, { maximumFractionDigits: digits });
+      }
+
+      function compact(value) {
+        if (!Number.isFinite(value)) return "n/a";
+        if (Math.abs(value) >= 1_000_000) return `${fmt(value / 1_000_000, 1)}M`;
+        if (Math.abs(value) >= 1_000) return `${fmt(value / 1_000, 1)}K`;
+        return fmt(value, 1);
+      }
+
+      function rate(row, field) {
+        return row.population ? (n(row[field]) / row.population) * 100000 : null;
+      }
+
+      function metricValue(row, metric) {
+        const def = metricDefs[metric];
+        return def.healthField ? rate(row, def.healthField) : row[metric];
+      }
+
+      function sum(list, field) {
+        return list.reduce((acc, row) => acc + n(row[field]), 0);
+      }
+
+      function avg(list, field) {
+        const values = list.map((row) => row[field]).filter(Number.isFinite);
+        return values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
+      }
+
+      function quantile(values, q) {
+        const sorted = values.filter(Number.isFinite).sort((a, b) => a - b);
+        if (!sorted.length) return 0;
+        return sorted[Math.floor((sorted.length - 1) * q)];
+      }
+
+      function colorScale(value, values) {
+        if (!Number.isFinite(value)) return "#e8e1d4";
+        const q1 = quantile(values, 0.25);
+        const q2 = quantile(values, 0.5);
+        const q3 = quantile(values, 0.75);
+        if (value <= q1) return "#eee8db";
+        if (value <= q2) return "#d6a348";
+        if (value <= q3) return "#be5634";
+        return "#6d2f24";
+      }
+
+      function grouped(list, keyFn) {
+        return list.reduce((acc, row) => {
+          const key = keyFn(row);
+          (acc[key] ||= []).push(row);
+          return acc;
+        }, {});
+      }
+
+      function normName(value) {
+        return String(value || "")
+          .toUpperCase()
+          .replace(/[^A-Z]+/g, " ")
+          .replace(/\s+/g, " ")
+          .trim()
+          .replace(/\s/g, "");
+      }
+
+      function yearlySeries(healthField) {
+        return years.map((year) => {
+          const list = rows.filter((row) => row.year === year);
+          const population = sum(list, "population");
+          const healthCases = sum(list, healthField);
+          return {
+            year,
+            wildfire_area_rai: sum(list, "wildfire_area_rai"),
+            pm25_avg: avg(list, "pm25_avg"),
+            health_rate: population ? (healthCases / population) * 100000 : null,
+          };
+        });
+      }
+
+      function linePath(points, x, y) {
+        return points
+          .map((p, i) => `${i ? "L" : "M"}${x(p).toFixed(1)},${y(p).toFixed(1)}`)
+          .join(" ");
+      }
+
+      function drawTrend(healthField, selectedYear) {
+        const data = yearlySeries(healthField);
+        const specs = [
+          {
+            label: "1. ไฟป่า",
+            sub: "พื้นที่ถูกไฟไหม้รวม",
+            field: "wildfire_area_rai",
+            color: "#c45833",
+            unit: "rai",
+          },
+          {
+            label: "2. PM2.5",
+            sub: "ค่าเฉลี่ยรายวันของฝุ่น",
+            field: "pm25_avg",
+            color: "#297a8c",
+            unit: "µg/m³",
+          },
+          {
+            label: `3. ${healthLabels[healthField]}`,
+            sub: "จำนวนเคสต่อประชากร 100,000 คน",
+            field: "health_rate",
+            color: "#1f6650",
+            unit: "/100k",
+          },
+        ];
+        document.querySelector("#trendChart").innerHTML = `
+          <div class="trend-explainer">
+            วิธีอ่าน: ดูทิศทางขึ้นลงในแต่ละแถว และดูจุดสีดำของปีที่เลือกอยู่ตอนนี้. แต่ละแถวคนละหน่วย จึงไม่ควรเทียบความสูงข้ามแถว.
+          </div>
+          <div class="trend-grid">
+            ${specs.map((spec) => drawTrendRow(data, spec, selectedYear)).join("")}
+          </div>`;
+      }
+
+      function drawTrendRow(data, spec, selectedYear) {
+        const width = 720;
+        const height = 96;
+        const pad = { top: 10, right: 12, bottom: 24, left: 12 };
+        const valid = data.filter((d) => Number.isFinite(d[spec.field]));
+        const values = valid.map((d) => d[spec.field]);
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        const span = max - min || 1;
+        const x = (d) => pad.left + ((d.year - years[0]) / (years.at(-1) - years[0])) * (width - pad.left - pad.right);
+        const y = (d) => pad.top + (1 - (d[spec.field] - min) / span) * (height - pad.top - pad.bottom);
+        const latest = valid.at(-1);
+        const selected = valid.find((d) => d.year === selectedYear);
+        const peak = valid.reduce((best, d) => (d[spec.field] > best[spec.field] ? d : best), valid[0]);
+        return `
+          <div class="trend-row">
+            <div>
+              <div class="trend-title">${spec.label}</div>
+              <div class="trend-sub">${spec.sub}</div>
+              <div class="trend-read">สูงสุด: ${peak.year} (${fmt(peak[spec.field], 1)} ${spec.unit})</div>
+            </div>
+            <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${spec.label} trend">
+              <line class="grid-line" x1="${pad.left}" x2="${width - pad.right}" y1="${height - pad.bottom}" y2="${height - pad.bottom}"></line>
+              <path d="${linePath(valid, x, y)}" fill="none" stroke="${spec.color}" stroke-width="4"></path>
+              ${valid.map((d) => `<circle cx="${x(d)}" cy="${y(d)}" r="3.5" fill="${spec.color}"><title>${d.year}: ${fmt(d[spec.field], 1)} ${spec.unit}</title></circle>`).join("")}
+              ${selected ? `<line x1="${x(selected)}" x2="${x(selected)}" y1="${pad.top}" y2="${height - pad.bottom}" stroke="rgba(36,35,31,.35)" stroke-dasharray="4 4"></line><circle cx="${x(selected)}" cy="${y(selected)}" r="6" fill="#24231f"><title>Selected ${selected.year}: ${fmt(selected[spec.field], 1)} ${spec.unit}</title></circle>` : ""}
+              ${valid.map((d) => `<text class="tick" x="${x(d)}" y="${height - 7}" text-anchor="middle">${d.year}</text>`).join("")}
+            </svg>
+            <div class="trend-value">
+              ${selected ? `ปีที่เลือก ${selected.year}: ${fmt(selected[spec.field], 1)} ${spec.unit}` : `ไม่มีข้อมูลปี ${selectedYear}`}
+              <br>ล่าสุด: ${latest ? `${latest.year} ${fmt(latest[spec.field], 1)} ${spec.unit}` : "n/a"}
+            </div>
+          </div>`;
+      }
+
+      function drawBars(selector, data, valueKey, labelKey, color) {
+        const max = Math.max(...data.map((d) => n(d[valueKey])), 1);
+        document.querySelector(selector).innerHTML = `
+          <div class="bar-list">
+            ${data
+              .map((d) => {
+                const width = (n(d[valueKey]) / max) * 100;
+                return `
+                  <div class="bar-row">
+                    <div class="bar-name">${d[labelKey]}</div>
+                    <div class="bar-track"><div class="bar-fill" style="width:${width}%; background:${color}"></div></div>
+                    <div class="bar-value">${compact(d[valueKey])}</div>
+                  </div>`;
+              })
+              .join("")}
+          </div>`;
+      }
+
+      function drawTiles(activeRows, metric) {
+        const values = activeRows.map((row) => metricValue(row, metric));
+        const sorted = [...activeRows].sort(
+          (a, b) =>
+            Number(a.health_region || 99) - Number(b.health_region || 99) ||
+            String(a.province_en).localeCompare(String(b.province_en))
+        );
+        document.querySelector("#tileGrid").innerHTML = sorted
+          .map((row) => {
+            const value = metricValue(row, metric);
+            const title = `${row.province_en || row.province}: ${fmt(value, 2)} ${metricDefs[metric].unit}; region ${row.health_region || "n/a"}`;
+            return `<div class="tile" title="${title}" style="background:${colorScale(value, values)}"></div>`;
+          })
+          .join("");
+      }
+
+      function geoBounds(features) {
+        const bounds = [Infinity, Infinity, -Infinity, -Infinity];
+        const visit = (coords) => {
+          if (typeof coords[0] === "number") {
+            bounds[0] = Math.min(bounds[0], coords[0]);
+            bounds[1] = Math.min(bounds[1], coords[1]);
+            bounds[2] = Math.max(bounds[2], coords[0]);
+            bounds[3] = Math.max(bounds[3], coords[1]);
+            return;
+          }
+          coords.forEach(visit);
+        };
+        features.forEach((feature) => visit(feature.geometry.coordinates));
+        return bounds;
+      }
+
+      function ringPath(ring, project) {
+        return ring.map((point, i) => `${i ? "L" : "M"}${project(point).join(",")}`).join(" ") + "Z";
+      }
+
+      function geometryPath(geometry, project) {
+        const polygons = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates;
+        return polygons
+          .map((polygon) => polygon.map((ring) => ringPath(ring, project)).join(" "))
+          .join(" ");
+      }
+
+      function drawMap(activeRows, metric) {
+        if (!provinceGeo) return;
+        const features = provinceGeo.features;
+        const rowByProvince = Object.fromEntries(activeRows.map((row) => [normName(row.province_en), row]));
+        const values = activeRows.map((row) => metricValue(row, metric)).filter(Number.isFinite);
+        const [minX, minY, maxX, maxY] = geoBounds(features);
+        const width = 560;
+        const height = 720;
+        const pad = 12;
+        const scale = Math.min((width - pad * 2) / (maxX - minX), (height - pad * 2) / (maxY - minY));
+        const mapW = (maxX - minX) * scale;
+        const mapH = (maxY - minY) * scale;
+        const offsetX = (width - mapW) / 2;
+        const offsetY = (height - mapH) / 2;
+        const project = ([lon, lat]) => [
+          (offsetX + (lon - minX) * scale).toFixed(1),
+          (offsetY + (maxY - lat) * scale).toFixed(1),
+        ];
+        const ranked = [...activeRows]
+          .filter((row) => Number.isFinite(metricValue(row, metric)))
+          .sort((a, b) => metricValue(b, metric) - metricValue(a, metric))
+          .slice(0, 5);
+        document.querySelector("#mapChart").innerHTML = `
+          <div class="map-wrap">
+            <svg class="thai-map" viewBox="0 0 ${width} ${height}" role="img" aria-label="Thailand province choropleth map">
+              ${features
+                .map((feature) => {
+                  const row = rowByProvince[normName(feature.properties.pro_en)];
+                  const value = row ? metricValue(row, metric) : null;
+                  const fill = colorScale(value, values);
+                  const label = `${feature.properties.pro_en}: ${fmt(value, 2)} ${metricDefs[metric].unit}`;
+                  return `<path class="province-shape" d="${geometryPath(feature.geometry, project)}" fill="${fill}"><title>${label}</title></path>`;
+                })
+                .join("")}
+            </svg>
+            <div class="map-note">
+              <p><strong>${metricDefs[metric].label}</strong> by province for <strong>${yearSelect.value}</strong>.</p>
+              <p style="margin-top:8px">Top provinces:</p>
+              <table style="margin-top:6px">
+                <tbody>
+                  ${ranked.map((row) => `<tr><td>${row.province_en}</td><td>${fmt(metricValue(row, metric), 1)}</td></tr>`).join("")}
+                </tbody>
+              </table>
+            </div>
+          </div>`;
+      }
+
+      function drawScatter(activeRows, healthField) {
+        const data = activeRows.filter((r) => Number.isFinite(r.wildfire_area_rai) && Number.isFinite(r.pm25_avg));
+        const width = 470;
+        const height = 292;
+        const pad = { top: 16, right: 18, bottom: 42, left: 54 };
+        const maxX = Math.max(...data.map((d) => d.wildfire_area_rai), 1);
+        const maxY = Math.max(...data.map((d) => d.pm25_avg), 1);
+        const rates = data.map((d) => rate(d, healthField)).filter(Number.isFinite);
+        const maxRate = Math.max(...rates, 1);
+        const x = (d) => pad.left + (d.wildfire_area_rai / maxX) * (width - pad.left - pad.right);
+        const y = (d) => height - pad.bottom - (d.pm25_avg / maxY) * (height - pad.top - pad.bottom);
+        document.querySelector("#scatterChart").innerHTML = `
+          <svg viewBox="0 0 ${width} ${height}">
+            <line class="axis" x1="${pad.left}" x2="${width - pad.right}" y1="${height - pad.bottom}" y2="${height - pad.bottom}"></line>
+            <line class="axis" x1="${pad.left}" x2="${pad.left}" y1="${pad.top}" y2="${height - pad.bottom}"></line>
+            ${data
+              .map((d) => {
+                const r = rate(d, healthField);
+                const size = 4 + (n(r) / maxRate) * 11;
+                return `<circle cx="${x(d)}" cy="${y(d)}" r="${size}" fill="rgba(196,88,51,.58)" stroke="#6d2f24"><title>${d.province_en}: ${fmt(d.wildfire_area_rai)} rai, PM2.5 ${fmt(d.pm25_avg, 1)}, ${healthLabels[healthField]} ${fmt(r, 1)} /100k</title></circle>`;
+              })
+              .join("")}
+            <text class="tick" x="${width / 2}" y="${height - 8}" text-anchor="middle">wildfire area</text>
+            <text class="tick" transform="translate(14 ${height / 2}) rotate(-90)" text-anchor="middle">PM2.5</text>
+          </svg>`;
+      }
+
+      function drawRegion(activeRows, healthField) {
+        const groups = grouped(activeRows.filter((r) => r.health_region), (r) => r.health_region);
+        const data = Object.entries(groups)
+          .map(([region, list]) => {
+            const population = sum(list, "population");
+            return {
+              region: `Region ${region}`,
+              value: population ? (sum(list, healthField) / population) * 100000 : 0,
+            };
+          })
+          .sort((a, b) => b.value - a.value);
+        drawBars("#regionChart", data, "value", "region", "#1f6650");
+      }
+
+      function drawCauses() {
+        const byCause = Object.entries(grouped(causes, (d) => d.cause))
+          .map(([cause, list]) => ({ cause, area_rai: sum(list, "area_rai") }))
+          .sort((a, b) => b.area_rai - a.area_rai)
+          .slice(0, 10);
+        drawBars("#causeChart", byCause, "area_rai", "cause", "#d69a2d");
+      }
+
+      function renderTable(activeRows, metric, healthField) {
+        const data = [...activeRows]
+          .map((row) => ({
+            ...row,
+            selected_metric: metricValue(row, metric),
+            selected_health_rate: rate(row, healthField),
+          }))
+          .sort((a, b) => n(b.selected_metric) - n(a.selected_metric))
+          .slice(0, 14);
+        document.querySelector("#tableNote").textContent = `${metricDefs[metric].label}, PM2.5, and ${healthLabels[healthField]} for selected year.`;
+        document.querySelector("#tableWrap").innerHTML = `
+          <table>
+            <thead>
+              <tr>
+                <th>Province</th><th>Region</th><th>${metricDefs[metric].label}</th><th>PM2.5</th><th>${healthLabels[healthField]} /100k</th><th>Population</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data
+                .map(
+                  (d) => `<tr>
+                    <td>${d.province_en || d.province}</td>
+                    <td>${d.health_region || ""}</td>
+                    <td>${fmt(d.selected_metric, 2)}</td>
+                    <td>${fmt(d.pm25_avg, 1)}</td>
+                    <td>${fmt(d.selected_health_rate, 1)}</td>
+                    <td>${fmt(d.population)}</td>
+                  </tr>`
+                )
+                .join("")}
+            </tbody>
+          </table>`;
+      }
+
+      function renderPrepRecord() {
+        const coverage = DATA.summary.coverage;
+        const sourceList = DATA.generated_from.map((name) => `<span class="pill">${name}</span>`).join("");
+        document.querySelector("#sourcePills").innerHTML = sourceList;
+        document.querySelector("#prepRecord").innerHTML = `
+          <table>
+            <tbody>
+              <tr><th>Cleaned province-year rows</th><td>${fmt(DATA.summary.province_year_rows)}</td></tr>
+              <tr><th>Wildfire cause rows</th><td>${fmt(DATA.summary.cause_rows)}</td></tr>
+              <tr><th>Province count</th><td>${fmt(DATA.summary.province_count)}</td></tr>
+              <tr><th>Year range</th><td>${DATA.summary.year_min}-${DATA.summary.year_max}</td></tr>
+              <tr><th>Best overlap</th><td>${DATA.summary.best_overlap}</td></tr>
+              <tr><th>PM2.5 rows with values</th><td>${fmt(coverage.pm25_avg)}</td></tr>
+              <tr><th>Wildfire rows with values</th><td>${fmt(coverage.wildfire_area_rai)}</td></tr>
+              <tr><th>Province area rows with values</th><td>${fmt(coverage.province_area_sqkm)}</td></tr>
+            </tbody>
+          </table>`;
+      }
+
+      function render() {
+        const selectedYear = Number(yearSelect.value);
+        const metric = metricSelect.value;
+        const healthField = healthSelect.value;
+        const activeRows = rows.filter((row) => row.year === selectedYear);
+        const population = sum(activeRows, "population");
+        const healthRate = population ? (sum(activeRows, healthField) / population) * 100000 : null;
+        const topFire = [...activeRows].sort((a, b) => n(b.wildfire_area_rai) - n(a.wildfire_area_rai))[0];
+        const topMetric = [...activeRows].sort((a, b) => n(metricValue(b, metric)) - n(metricValue(a, metric)))[0];
+
+        document.querySelector("#storyTitle").textContent = `${selectedYear}: ${metricDefs[metric].label} led by ${topMetric?.province_en || "n/a"}`;
+        document.querySelector("#storyText").textContent =
+          `${topFire?.province_en || "The leading province"} records the highest burned area in the selected year. ` +
+          `The dashboard connects that wildfire layer with annual PM2.5 and ${healthLabels[healthField].toLowerCase()} rates, ` +
+          `so the story stays comparative rather than causal.`;
+
+        document.querySelector("#kpis").innerHTML = [
+          ["Burned area", `${compact(sum(activeRows, "wildfire_area_rai"))} rai`],
+          ["Wildfire events", compact(sum(activeRows, "number_of_wildfire"))],
+          ["Average PM2.5", `${fmt(avg(activeRows, "pm25_avg"), 1)} µg/m³`],
+          [`${healthLabels[healthField]} rate`, `${fmt(healthRate, 1)} /100k`],
+        ]
+          .map(([label, value]) => `<div class="kpi"><div class="label">${label}</div><div class="value">${value}</div></div>`)
+          .join("");
+
+        drawTrend(healthField, selectedYear);
+        drawMap(activeRows, metric);
+        drawTiles(activeRows, metric);
+        document.querySelector("#rankNote").textContent = `${metricDefs[metric].label} in ${selectedYear}.`;
+        drawBars(
+          "#rankChart",
+          [...activeRows]
+            .map((row) => ({ ...row, selected_metric: metricValue(row, metric) }))
+            .sort((a, b) => n(b.selected_metric) - n(a.selected_metric))
+            .slice(0, 10),
+          "selected_metric",
+          "province_en",
+          metricDefs[metric].color
+        );
+        drawScatter(activeRows, healthField);
+        drawRegion(activeRows, healthField);
+        drawCauses();
+        renderTable(activeRows, metric, healthField);
+        renderPrepRecord();
+      }
+
+      render();
+    </script>
+  </body>
+</html>

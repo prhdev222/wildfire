@@ -1,0 +1,91 @@
+year,cause,area_rai
+2015,Slash-and-burn farming,10.312368
+2016,Slash-and-burn farming,12.134464
+2017,Slash-and-burn farming,4.880992
+2018,Slash-and-burn farming,3.68656
+2019,Slash-and-burn farming,8.036944
+2020,Slash-and-burn farming,8.015808
+2021,Slash-and-burn farming,4.797024
+2022,Slash-and-burn farming,0.994192
+2023,Slash-and-burn farming,4.2408
+2015,Foraging in the forest,54.279872
+2016,Foraging in the forest,109.511856
+2017,Foraging in the forest,90.75328
+2018,Foraging in the forest,67.029072
+2019,Foraging in the forest,127.356576
+2020,Foraging in the forest,139.35696
+2021,Foraging in the forest,97.016224
+2022,Foraging in the forest,37.377296
+2023,Foraging in the forest,127.558768
+2015,Hunting,15.282672
+2016,Hunting,29.332224
+2017,Hunting,9.36376
+2018,Hunting,7.069632000000001
+2019,Hunting,30.016784000000005
+2020,Hunting,29.426448
+2021,Hunting,13.109920000000002
+2022,Hunting,5.207984
+2023,Hunting,18.659456
+2015,Animal husbandry / Livestock raising,3.4755519999999995
+2016,Animal husbandry / Livestock raising,4.332816
+2017,Animal husbandry / Livestock raising,2.464
+2018,Animal husbandry / Livestock raising,0.9425120000000001
+2019,Animal husbandry / Livestock raising,2.9924
+2020,Animal husbandry / Livestock raising,2.157776
+2021,Animal husbandry / Livestock raising,0.8632
+2022,Animal husbandry / Livestock raising,0.8768
+2023,Animal husbandry / Livestock raising,1.456592
+2015,Tourist,0.052176
+2016,Tourist,0.1264
+2017,Tourist,0.060384
+2018,Tourist,0.022192
+2019,Tourist,0.0416
+2020,Tourist,0.0112
+2021,Tourist,0.008
+2022,Tourist,0.0
+2023,Tourist,0.0
+2015,Conflict,0.828032
+2016,Conflict,4.04928
+2017,Conflict,1.299712
+2018,Conflict,1.129152
+2019,Conflict,1.934304
+2020,Conflict,0.3312
+2021,Conflict,1.6096
+2022,Conflict,0.0736
+2023,Conflict,0.0464
+2015,Illegal logging,0.232
+2016,Illegal logging,0.6456
+2017,Illegal logging,0.249936
+2018,Illegal logging,0.04
+2019,Illegal logging,0.4192
+2020,Illegal logging,0.04
+2021,Illegal logging,0.264
+2022,Illegal logging,0.016
+2023,Illegal logging,0.0288
+2015,"Accident, Negligence, Carelessness",0.7164
+2016,"Accident, Negligence, Carelessness",0.595008
+2017,"Accident, Negligence, Carelessness",0.017024
+2018,"Accident, Negligence, Carelessness",0.1412
+2019,"Accident, Negligence, Carelessness",0.352
+2020,"Accident, Negligence, Carelessness",0.3164
+2021,"Accident, Negligence, Carelessness",0.168
+2022,"Accident, Negligence, Carelessness",0.101296
+2023,"Accident, Negligence, Carelessness",0.3888
+2015,Unknown cause,7.896160000000001
+2016,Unknown cause,26.981024
+2017,Unknown cause,9.80872
+2018,Unknown cause,8.270736
+2019,Unknown cause,39.666944
+2020,Unknown cause,84.503872
+2021,Unknown cause,37.751024
+2022,Unknown cause,15.580864000000002
+2023,Unknown cause,132.949872
+2015,Others,3.649728
+2016,Others,13.724944
+2017,Others,1.7726240000000002
+2018,Others,0.8950719999999999
+2019,Others,32.018832
+2020,Others,15.54184
+2021,Others,5.53992
+2022,Others,0.8944959999999998
+2023,Others,12.237648
