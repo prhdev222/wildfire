@@ -448,6 +448,58 @@
         margin: 18px 0 4px;
       }
 
+      .explain-btn {
+        border: 1px solid var(--ash-line);
+        background: var(--control);
+        color: var(--ink-soft);
+        font: inherit;
+        font-size: 11px;
+        font-weight: 700;
+        border-radius: 6px;
+        padding: 6px 10px;
+        cursor: pointer;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      .explain-btn:hover {
+        border-color: var(--ash-line-strong);
+        color: var(--ink);
+      }
+
+      .explain-btn.active {
+        background: var(--ink);
+        color: var(--paper);
+        border-color: var(--ink);
+      }
+
+      .explain-box {
+        background: rgba(239, 234, 223, 0.6);
+        border: 1px solid var(--ash-line);
+        border-radius: 8px;
+        padding: 12px 14px;
+        margin-top: 12px;
+        color: var(--ink-soft);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      .explain-box p {
+        margin-top: 8px;
+      }
+
+      .explain-box p:first-child {
+        margin-top: 0;
+      }
+
+      .explain-box strong {
+        color: var(--ink);
+      }
+
+      .explain-box a {
+        color: var(--ember);
+      }
+
       .analysis-link {
         display: block;
         margin-top: 22px;
@@ -579,8 +631,10 @@
                 <h2>National Trend</h2>
                 <p class="note">เส้นนี้เป็นภาพรวมทั้งประเทศตามปี และจะไฮไลต์ปีที่เลือกจาก dropdown.</p>
               </div>
+              <button class="explain-btn" data-target="trendExplain">ดูคำอธิบาย</button>
             </div>
             <div id="trendChart"></div>
+            <div id="trendExplain" class="explain-box" hidden></div>
           </article>
 
           <article class="panel wide">
@@ -589,9 +643,11 @@
                 <h2>Thailand Province Map</h2>
                 <p class="note">สีเข้มหมายถึงค่าของตัวชี้วัดที่เลือกสูงกว่าในปีนั้น.</p>
               </div>
+              <button class="explain-btn" data-target="mapExplain">ดูคำอธิบาย</button>
             </div>
             <div id="mapChart"></div>
             <div class="legend"><span>lower</span><span class="ramp"></span><span>higher</span></div>
+            <div id="mapExplain" class="explain-box" hidden></div>
           </article>
 
           <article class="panel">
@@ -600,8 +656,10 @@
                 <h2>Top Provinces</h2>
                 <p class="note" id="rankNote"></p>
               </div>
+              <button class="explain-btn" data-target="rankExplain">ดูคำอธิบาย</button>
             </div>
             <div id="rankChart"></div>
+            <div id="rankExplain" class="explain-box" hidden></div>
           </article>
 
           <article class="panel wide">
@@ -613,8 +671,10 @@
                   (จังหวัดส่วนใหญ่ค่าน้อย มีไม่กี่จังหวัดค่าสูงลิ่ว)
                 </p>
               </div>
+              <button class="explain-btn" data-target="relExplain">ดูคำอธิบาย</button>
             </div>
             <div id="scatterChart"></div>
+            <div id="relExplain" class="explain-box" hidden></div>
           </article>
 
           <article class="panel">
@@ -623,8 +683,10 @@
                 <h2>Health Region Impact</h2>
                 <p class="note">Population-weighted rate per 100,000 people.</p>
               </div>
+              <button class="explain-btn" data-target="regionExplain">ดูคำอธิบาย</button>
             </div>
             <div id="regionChart"></div>
+            <div id="regionExplain" class="explain-box" hidden></div>
           </article>
 
           <article class="panel wide">
@@ -633,8 +695,10 @@
                 <h2>Wildfire Causes</h2>
                 <p class="note">National cause categories in long format from the source workbook.</p>
               </div>
+              <button class="explain-btn" data-target="causeExplain">ดูคำอธิบาย</button>
             </div>
             <div id="causeChart"></div>
+            <div id="causeExplain" class="explain-box" hidden></div>
           </article>
 
           <article class="panel wide">
@@ -713,6 +777,17 @@
         const field = metricDefs[metricSelect.value].healthField;
         if (field) healthSelect.value = field;
         render();
+      });
+
+      document.querySelectorAll(".explain-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const box = document.getElementById(btn.dataset.target);
+          if (!box) return;
+          const isHidden = box.hasAttribute("hidden");
+          box.toggleAttribute("hidden", !isHidden);
+          btn.classList.toggle("active", isHidden);
+          btn.textContent = isHidden ? "ซ่อนคำอธิบาย" : "ดูคำอธิบาย";
+        });
       });
 
       fetch("../data/geo/thailand_provinces.geojson")
@@ -989,6 +1064,38 @@
         return { slope, intercept };
       }
 
+      function pearsonR(points, xKey, yKey) {
+        const pts = points.filter((d) => Number.isFinite(d[xKey]) && Number.isFinite(d[yKey]));
+        if (pts.length < 3) return null;
+        const mx = pts.reduce((a, d) => a + d[xKey], 0) / pts.length;
+        const my = pts.reduce((a, d) => a + d[yKey], 0) / pts.length;
+        let num = 0,
+          dx2 = 0,
+          dy2 = 0;
+        pts.forEach((d) => {
+          const dx = d[xKey] - mx;
+          const dy = d[yKey] - my;
+          num += dx * dy;
+          dx2 += dx * dx;
+          dy2 += dy * dy;
+        });
+        const denom = Math.sqrt(dx2 * dy2);
+        return denom ? num / denom : null;
+      }
+
+      function rStrength(r) {
+        if (r === null) return "คำนวณไม่ได้ (ข้อมูลไม่พอ)";
+        const abs = Math.abs(r);
+        const strength = abs >= 0.7 ? "แรงมาก" : abs >= 0.5 ? "แรง" : abs >= 0.3 ? "ปานกลาง" : abs >= 0.1 ? "อ่อน" : "แทบไม่มี";
+        const direction = r > 0.02 ? "ทิศบวก (เพิ่มขึ้นด้วยกัน)" : r < -0.02 ? "ทิศลบ (สวนทางกัน)" : "ไม่มีทิศทางชัดเจน";
+        return `r = ${fmt(r, 2)} — ความสัมพันธ์${strength}, ${direction}`;
+      }
+
+      function setExplain(id, html) {
+        const box = document.getElementById(id);
+        if (box) box.innerHTML = html;
+      }
+
       function miniScatterSvg(points, spec) {
         const width = 300;
         const height = 230;
@@ -1165,6 +1272,110 @@
           </table>`;
       }
 
+      function explainTrend(healthField, selectedYear) {
+        const data = yearlySeries(healthField);
+        const healthLabel = healthLabels[healthField];
+        const series = [
+          { key: "wildfire_area_rai", label: "พื้นที่ไฟป่า", unit: "rai" },
+          { key: "pm25_avg", label: "PM2.5 เฉลี่ย", unit: "µg/m³" },
+          { key: "health_rate", label: `อัตรา${healthLabel}`, unit: "/100k" },
+        ];
+        return series
+          .map((s) => {
+            const valid = data.filter((d) => Number.isFinite(d[s.key]));
+            if (valid.length < 2) return `<p><strong>${s.label}:</strong> ข้อมูลไม่พอสำหรับสรุปแนวโน้ม</p>`;
+            const first = valid[0];
+            const last = valid[valid.length - 1];
+            const peak = valid.reduce((best, d) => (d[s.key] > best[s.key] ? d : best), valid[0]);
+            const pct = first[s.key] ? ((last[s.key] - first[s.key]) / first[s.key]) * 100 : null;
+            const dir = pct === null ? "เปลี่ยนแปลงไม่ชัดเจน" : pct > 3 ? "เพิ่มขึ้น" : pct < -3 ? "ลดลง" : "ค่อนข้างคงที่";
+            const selected = valid.find((d) => d.year === selectedYear);
+            return `<p><strong>${s.label}:</strong> จากปี ${first.year} ถึง ${last.year} ${dir}${pct !== null ? ` (${pct > 0 ? "+" : ""}${fmt(pct, 0)}%)` : ""} — สูงสุดปี ${peak.year} ที่ ${fmt(peak[s.key], 1)} ${s.unit}${selected ? `; ปีที่เลือก (${selectedYear}): ${fmt(selected[s.key], 1)} ${s.unit}` : ""}</p>`;
+          })
+          .join("");
+      }
+
+      function explainMap(activeRows, metric) {
+        const def = metricDefs[metric];
+        const valid = activeRows.filter((r) => Number.isFinite(metricValue(r, metric)));
+        if (!valid.length) return `<p>ไม่มีข้อมูลสำหรับตัวชี้วัดนี้ในปีที่เลือก</p>`;
+        const sorted = [...valid].sort((a, b) => metricValue(b, metric) - metricValue(a, metric));
+        const label = (row) => (row ? `${row.province_en} (${fmt(metricValue(row, metric), 2)} ${def.unit})` : "-");
+        const values = valid.map((r) => metricValue(r, metric));
+        const meanVal = values.reduce((a, b) => a + b, 0) / values.length;
+        const q3 = quantile(values, 0.75);
+        const aboveQ3 = values.filter((v) => v > q3).length;
+        return `
+          <p><strong>${sorted[0].province_en}</strong> มี${def.label}สูงสุดในปีที่เลือกที่ ${fmt(metricValue(sorted[0], metric), 2)} ${def.unit} รองลงมาคือ ${label(sorted[1])} และ ${label(sorted[2])}</p>
+          <p>ค่าเฉลี่ยทั้งประเทศอยู่ที่ ${fmt(meanVal, 2)} ${def.unit} — จังหวัดอันดับ 1 สูงกว่าค่าเฉลี่ย ${meanVal ? fmt(metricValue(sorted[0], metric) / meanVal, 1) : "n/a"} เท่า มี ${aboveQ3} จังหวัด (จาก ${valid.length}) ที่อยู่ในกลุ่มสีเข้มสุด (quartile บน 25%)</p>`;
+      }
+
+      function explainRank(activeRows, metric, selectedYear) {
+        const def = metricDefs[metric];
+        const withVal = activeRows.map((r) => ({ ...r, v: metricValue(r, metric) })).filter((r) => Number.isFinite(r.v));
+        if (!withVal.length) return `<p>ไม่มีข้อมูล</p>`;
+        const sorted = [...withVal].sort((a, b) => b.v - a.v);
+        const top10 = sorted.slice(0, 10);
+        const totalAll = sorted.reduce((a, r) => a + r.v, 0);
+        const top10Sum = top10.reduce((a, r) => a + r.v, 0);
+        const share = totalAll ? (top10Sum / totalAll) * 100 : null;
+        const gapRatio = sorted[1]?.v ? sorted[0].v / sorted[1].v : null;
+        return `
+          <p>10 จังหวัดนี้ (จากทั้งหมด ${sorted.length} จังหวัดที่มีข้อมูล) รวมกันคิดเป็น ${share !== null ? fmt(share, 0) + "%" : "n/a"} ของ${def.label}ทั้งประเทศในปี ${selectedYear}</p>
+          <p><strong>${sorted[0].province_en}</strong> (${fmt(sorted[0].v, 1)} ${def.unit}) นำอันดับ 2 (${sorted[1]?.province_en || "-"}) อยู่ ${gapRatio ? fmt(gapRatio, 1) + " เท่า" : "n/a"}</p>`;
+      }
+
+      function explainRelationships(activeRows, healthField) {
+        const healthLabel = healthLabels[healthField];
+        const rowsWithFit = activeRows.map((r) => ({
+          ...r,
+          _logFire: Number.isFinite(r.wildfire_area_rai) ? Math.log10(r.wildfire_area_rai + 1) : null,
+          _health: rate(r, healthField),
+        }));
+        const r1 = pearsonR(rowsWithFit, "_logFire", "pm25_avg");
+        const r2 = pearsonR(rowsWithFit, "pm25_avg", "_health");
+        const r3 = pearsonR(rowsWithFit, "_logFire", "_health");
+        const count = rowsWithFit.filter((r) => Number.isFinite(r.wildfire_area_rai) && Number.isFinite(r.pm25_avg)).length;
+        return `
+          <p>คำนวณจากข้อมูลปีที่เลือกเท่านั้น (n &asymp; ${count} จังหวัด):</p>
+          <p><strong>ไฟป่า &harr; PM2.5:</strong> ${rStrength(r1)}</p>
+          <p><strong>PM2.5 &harr; ${healthLabel}:</strong> ${rStrength(r2)}</p>
+          <p><strong>ไฟป่า &harr; ${healthLabel}:</strong> ${rStrength(r3)}</p>
+          <p>ตัวเลขนี้เป็นความสัมพันธ์ดิบของปีเดียว ยังไม่ได้คุมตัวแปรกวน เช่น เขตสุขภาพหรือแนวโน้มตามปี — ดูการวิเคราะห์เชิงลึกที่คุมตัวแปรกวนแล้วได้ที่ <a href="./analysis.html">หน้า Data Analysis</a></p>`;
+      }
+
+      function explainRegion(activeRows, healthField) {
+        const healthLabel = healthLabels[healthField];
+        const groups = grouped(activeRows.filter((r) => r.health_region), (r) => r.health_region);
+        const data = Object.entries(groups)
+          .map(([region, list]) => {
+            const population = sum(list, "population");
+            return { region, value: population ? (sum(list, healthField) / population) * 100000 : 0 };
+          })
+          .sort((a, b) => b.value - a.value);
+        if (!data.length) return `<p>ไม่มีข้อมูล</p>`;
+        const top = data[0];
+        const bottom = data[data.length - 1];
+        const ratio = bottom.value ? top.value / bottom.value : null;
+        return `
+          <p><strong>เขต ${top.region}</strong> มีอัตรา${healthLabel}สูงสุด (${fmt(top.value, 1)} /100k) สูงกว่าเขตต่ำสุด <strong>เขต ${bottom.region}</strong> (${fmt(bottom.value, 1)} /100k) อยู่ ${ratio ? fmt(ratio, 1) + " เท่า" : "n/a"}</p>
+          <p>อัตรานี้ถ่วงน้ำหนักด้วยประชากร (ผลรวมเคส &divide; ผลรวมประชากรของทุกจังหวัดในเขต) ไม่ใช่ค่าเฉลี่ยแบบธรรมดาของแต่ละจังหวัด</p>`;
+      }
+
+      function explainCauses() {
+        const byCause = Object.entries(grouped(causes, (d) => d.cause))
+          .map(([cause, list]) => ({ cause, area_rai: sum(list, "area_rai") }))
+          .sort((a, b) => b.area_rai - a.area_rai);
+        if (!byCause.length) return `<p>ไม่มีข้อมูล</p>`;
+        const total = byCause.reduce((a, c) => a + c.area_rai, 0);
+        const top = byCause[0];
+        const topShare = total ? (top.area_rai / total) * 100 : null;
+        const slashIdx = byCause.findIndex((c) => /slash/i.test(c.cause));
+        return `
+          <p><strong>${top.cause}</strong> เป็นสาเหตุอันดับ 1 คิดเป็น ${topShare !== null ? fmt(topShare, 0) + "%" : "n/a"} ของพื้นที่เผาไหม้สะสมทั้งหมด (รวมทุกปีในข้อมูล)</p>
+          ${slashIdx >= 0 ? `<p>"${byCause[slashIdx].cause}" ที่มักถูกเข้าใจว่าเป็นสาเหตุหลักในสื่อ จริงๆ แล้วอยู่อันดับ ${slashIdx + 1} จาก ${byCause.length} สาเหตุในข้อมูลชุดนี้</p>` : ""}`;
+      }
+
       function render() {
         const selectedYear = Number(yearSelect.value);
         const metric = metricSelect.value;
@@ -1191,7 +1402,9 @@
           .join("");
 
         drawTrend(healthField, selectedYear);
+        setExplain("trendExplain", explainTrend(healthField, selectedYear));
         drawMap(activeRows, metric);
+        setExplain("mapExplain", explainMap(activeRows, metric));
         document.querySelector("#rankNote").textContent = `${metricDefs[metric].label} in ${selectedYear}.`;
         drawBars(
           "#rankChart",
@@ -1203,9 +1416,13 @@
           "province_en",
           metricDefs[metric].color
         );
+        setExplain("rankExplain", explainRank(activeRows, metric, selectedYear));
         drawRelationships(activeRows, healthField);
+        setExplain("relExplain", explainRelationships(activeRows, healthField));
         drawRegion(activeRows, healthField);
+        setExplain("regionExplain", explainRegion(activeRows, healthField));
         drawCauses();
+        setExplain("causeExplain", explainCauses());
         renderTable(activeRows, metric, healthField);
         renderPrepRecord();
       }
