@@ -337,10 +337,15 @@
         margin-top: 4px;
       }
 
-      #progressionTable tr.current-state td {
+      #progressionTable tr.current-state td,
+      #rankTable tr.current-state td {
         background: rgba(31, 102, 80, 0.1);
         font-weight: 700;
         color: var(--ink);
+      }
+
+      #rankTable tr.rank-row:hover td {
+        background: rgba(196, 88, 51, 0.08);
       }
 
       .group-caption {
@@ -660,7 +665,8 @@
                 <h2>ตัดตัวแปรกวนทีละตัว: สัมพันธ์กันจริงแค่ไหน</h2>
                 <p class="note">
                   เลือกความสัมพันธ์ แล้วติ๊กคุมตัวแปรกวนทีละตัว &mdash; DAG และค่าสหสัมพันธ์ (r) จะคำนวณสดจากข้อมูลดิบ
-                  693 แถว (77 จังหวัด &times; ปี 2015&ndash;2023) ทุกครั้งที่ติ๊ก
+                  693 แถว (77 จังหวัด &times; ปี 2015&ndash;2023) ทุกครั้งที่ติ๊ก เส้นเอียงขึ้น+สีเขียว = ความสัมพันธ์ทิศบวก,
+                  เส้นเอียงลง&minus;สีส้ม = ทิศลบ, เส้นแบนสีเทา = แทบไม่มีความสัมพันธ์
                 </p>
               </div>
             </div>
@@ -681,6 +687,14 @@
             <div id="liveStat" class="dag-verdict"></div>
             <div class="group-caption" style="margin-top:16px">ตารางเทียบทั้ง 4 สถานะ (เห็นภาพรวมโดยไม่ต้องคลิก)</div>
             <div id="progressionTable"></div>
+
+            <div id="rankWrap" hidden>
+              <div class="panel-head" style="margin-top: 20px">
+                <div class="group-caption" style="margin: 0">จัดอันดับทั้ง 18 โรค ณ การตั้งค่าปัจจุบัน</div>
+                <label class="cond-check"><input type="checkbox" id="sigOnlyToggle" /> แสดงเฉพาะที่มีนัยสำคัญ (p&lt;0.05)</label>
+              </div>
+              <div id="rankTable"></div>
+            </div>
             <p class="note" style="margin-top: 10px">
               <strong>ข้อจำกัดของวิธีนี้:</strong> นี่คือ partial correlation ของตัวแปร 2 ตัวหลังหักค่าเฉลี่ยกลุ่มออก
               (demeaning) ซึ่งเทียบเท่า fixed-effects ทางคณิตศาสตร์สำหรับ panel แบบสมดุลชุดนี้ &mdash; ง่ายกว่ารีเกรสชัน
@@ -1099,11 +1113,32 @@
         return means;
       }
 
+      function normalCDF(z) {
+        const sign = z < 0 ? -1 : 1;
+        const az = Math.abs(z) / Math.SQRT2;
+        const t = 1 / (1 + 0.3275911 * az);
+        const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-az * az);
+        return 0.5 * (1 + sign * y);
+      }
+
+      function pValueFromR(r, effectiveN) {
+        if (r === null || !Number.isFinite(r) || effectiveN < 4) return null;
+        const rClamped = Math.max(-0.999999, Math.min(0.999999, r));
+        const z = Math.atanh(rClamped) * Math.sqrt(effectiveN - 3);
+        return 2 * (1 - normalCDF(Math.abs(z)));
+      }
+
+      const REGION_COUNT = new Set(PANEL.map((r) => r.health_region).filter(Boolean)).size;
+      const YEAR_COUNT = new Set(PANEL.map((r) => r.year)).size;
+
       function computeR(xKey, yKey, byRegion, byYear) {
         const pts = PANEL.map((r) => ({ x: r[xKey], y: r[yKey], region: r.health_region, year: r.year })).filter(
           (p) => Number.isFinite(p.x) && Number.isFinite(p.y)
         );
-        if (!byRegion && !byYear) return { r: pearsonRXY(pts), n: pts.length };
+        if (!byRegion && !byYear) {
+          const rRaw = pearsonRXY(pts);
+          return { r: rRaw, n: pts.length, p: pValueFromR(rRaw, pts.length) };
+        }
         const regionMeans = byRegion ? groupMeans(pts, "region") : null;
         const yearMeans = byYear ? groupMeans(pts, "year") : null;
         const grandX = pts.reduce((a, p) => a + p.x, 0) / pts.length;
@@ -1123,7 +1158,12 @@
           }
           return { x: dx, y: dy };
         });
-        return { r: pearsonRXY(resid), n: resid.length };
+        const rResid = pearsonRXY(resid);
+        // Demeaning consumes degrees of freedom (one per group mean estimated); subtract
+        // them before testing significance so the p-value isn't overstated.
+        const paramsUsed = (byRegion ? REGION_COUNT : 0) + (byYear ? YEAR_COUNT : 0) - (byRegion && byYear ? 1 : 0);
+        const effectiveN = Math.max(resid.length - paramsUsed, 4);
+        return { r: rResid, n: resid.length, p: pValueFromR(rResid, effectiveN) };
       }
 
       function getSpec(rel, healthField) {
@@ -1167,7 +1207,19 @@
           return `M${x1},${y1} C${x1},${my} ${x2},${my} ${x2},${y2}`;
         };
         const style = edgeStyle(r);
-        const mainEdge = `<path d="M${sourceX + nodeW},${topY + nodeH / 2} L${targetX},${topY + nodeH / 2}" stroke="${style.color}" stroke-width="${style.width}" fill="none" marker-end="url(#liveArrow)"${style.dash ? ` stroke-dasharray="3 3"` : ""}></path>`;
+        const midY = topY + nodeH / 2;
+        // Positive r tilts the line up to the right (rising, "+"); negative r tilts it down ("-").
+        // Threshold matches edgeStyle()'s |r| >= 0.1 cutoff so color and tilt never disagree.
+        const tilt = r === null ? 0 : r > 0.1 ? 13 : r < -0.1 ? -13 : 0;
+        const edgeX1 = sourceX + nodeW;
+        const edgeY1 = midY + tilt;
+        const edgeX2 = targetX;
+        const edgeY2 = midY - tilt;
+        const mainEdge = `<path d="M${edgeX1},${edgeY1} L${edgeX2},${edgeY2}" stroke="${style.color}" stroke-width="${style.width}" fill="none" marker-end="url(#liveArrow)"${style.dash ? ` stroke-dasharray="3 3"` : ""}></path>`;
+        const signBadge =
+          tilt !== 0
+            ? `<text x="${(edgeX1 + edgeX2) / 2}" y="${(edgeY1 + edgeY2) / 2 + (tilt > 0 ? -10 : 22)}" text-anchor="middle" font-size="20" font-weight="800" fill="${style.color}">${tilt > 0 ? "+" : "&minus;"}</text>`
+            : "";
         const confEdges = confPositions
           .map((c) => {
             const top = [c.x + confW / 2, c.y];
@@ -1203,6 +1255,7 @@
             ${confEdges}
             ${cutMarks}
             ${mainEdge}
+            ${signBadge}
             <rect x="${sourceX}" y="${topY}" width="${nodeW}" height="${nodeH}" rx="7" fill="var(--paper)" stroke="var(--ash-line-strong)"></rect>
             <text x="${sourceX + nodeW / 2}" y="${topY + nodeH / 2 + 4}" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">${spec.source}</text>
             <rect x="${targetX}" y="${topY}" width="${nodeW}" height="${nodeH}" rx="7" fill="var(--paper)" stroke="var(--ash-line-strong)"></rect>
@@ -1239,7 +1292,7 @@
         ];
         if (spec.extraConfounder) confounders.push({ name: spec.extraConfounder, key: "extra", cut: false });
 
-        const { r, n } = computeR(spec.xKey, spec.yKey, byRegion, byYear);
+        const { r, n, p } = computeR(spec.xKey, spec.yKey, byRegion, byYear);
         document.querySelector("#liveDagWrap").innerHTML = renderDag(spec, confounders, r);
 
         const condText =
@@ -1247,6 +1300,7 @@
         document.querySelector("#liveStat").innerHTML = `
           <strong>${spec.source} &harr; ${spec.target}</strong> &mdash; คุม: <strong>${condText}</strong><br>
           r = ${fmt(r, 3)} (n=${n}) &mdash; ความสัมพันธ์${strengthWord(r)}, ${r === null ? "" : r > 0.02 ? "ทิศบวก" : r < -0.02 ? "ทิศลบ" : "ไม่มีทิศทางชัดเจน"}
+          ${p !== null ? ` &mdash; p=${p < 0.001 ? "<0.001" : fmt(p, 3)} ${sigTag(p)}` : ""}
           ${spec.extraConfounder ? `<br><span class="note">*${spec.extraConfounder.replace("*", "")} ไม่มีข้อมูลในชุดนี้ให้คุมได้ จึงเป็นตัวแปรกวนที่เหลืออยู่เสมอ</span>` : ""}
         `;
 
@@ -1258,17 +1312,58 @@
         ];
         document.querySelector("#progressionTable").innerHTML = `
           <table>
-            <thead><tr><th>คุมตัวแปรกวน</th><th>r</th><th>n</th><th>ความแรง</th></tr></thead>
+            <thead><tr><th>คุมตัวแปรกวน</th><th>r</th><th>p</th><th>n</th><th>ความแรง</th></tr></thead>
             <tbody>
               ${combos
                 .map((c) => {
                   const res = computeR(spec.xKey, spec.yKey, c.byRegion, c.byYear);
                   const isCurrent = c.byRegion === byRegion && c.byYear === byYear;
-                  return `<tr${isCurrent ? ' class="current-state"' : ""}><td>${c.label}</td><td>${fmt(res.r, 3)}</td><td>${res.n}</td><td>${strengthWord(res.r)}</td></tr>`;
+                  return `<tr${isCurrent ? ' class="current-state"' : ""}><td>${c.label}</td><td>${fmt(res.r, 3)}</td><td>${res.p !== null ? (res.p < 0.001 ? "<0.001" : fmt(res.p, 3)) : "n/a"}</td><td>${res.n}</td><td>${strengthWord(res.r)}</td></tr>`;
                 })
                 .join("")}
             </tbody>
           </table>`;
+
+        renderRankTable(spec, byRegion, byYear);
+      }
+
+      function renderRankTable(spec, byRegion, byYear) {
+        const rankWrap = document.querySelector("#rankWrap");
+        rankWrap.hidden = currentRel === "fire_pm25";
+        if (rankWrap.hidden) return;
+        const sigOnly = document.querySelector("#sigOnlyToggle").checked;
+        const xKey = currentRel === "fire_health" ? "_logFire" : "pm25_avg";
+        const rows = Object.entries(HEALTH_FIELDS)
+          .map(([field, label]) => {
+            const res = computeR(xKey, `_rate_${field}`, byRegion, byYear);
+            return { field, label, ...res };
+          })
+          .filter((d) => !sigOnly || (d.p !== null && d.p < 0.05))
+          .sort((a, b) => Math.abs(b.r ?? 0) - Math.abs(a.r ?? 0));
+        document.querySelector("#rankTable").innerHTML = rows.length
+          ? `<table>
+              <thead><tr><th>โรค</th><th>r</th><th>p</th><th>นัยสำคัญ?</th></tr></thead>
+              <tbody>
+                ${rows
+                  .map(
+                    (d) => `<tr class="rank-row${d.field === currentHealthField ? " current-state" : ""}" data-field="${d.field}" style="cursor:pointer">
+                      <td>${d.label}</td>
+                      <td>${fmt(d.r, 3)}</td>
+                      <td>${d.p !== null ? (d.p < 0.001 ? "<0.001" : fmt(d.p, 3)) : "n/a"}</td>
+                      <td>${d.p !== null ? (d.p < 0.05 ? "&#10003;" : "&mdash;") : "n/a"}</td>
+                    </tr>`
+                  )
+                  .join("")}
+              </tbody>
+            </table>`
+          : `<p class="note">ไม่มีโรคใดมีนัยสำคัญภายใต้การตั้งค่านี้</p>`;
+        document.querySelectorAll(".rank-row").forEach((row) => {
+          row.addEventListener("click", () => {
+            currentHealthField = row.dataset.field;
+            healthFieldSelect.value = currentHealthField;
+            renderInteractive();
+          });
+        });
       }
 
       document.querySelectorAll(".rel-tab-btn").forEach((btn) => {
@@ -1285,6 +1380,7 @@
         currentHealthField = healthFieldSelect.value;
         renderInteractive();
       });
+      document.querySelector("#sigOnlyToggle").addEventListener("change", renderInteractive);
       renderInteractive();
     </script>
   </body>
