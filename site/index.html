@@ -276,20 +276,6 @@
         text-align: right;
       }
 
-      .tile-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(28px, 1fr));
-        gap: 5px;
-      }
-
-      .tile {
-        border: 1px solid rgba(36, 35, 31, 0.16);
-        border-radius: 4px;
-        aspect-ratio: 1;
-        min-width: 0;
-        cursor: default;
-      }
-
       .legend {
         display: flex;
         align-items: center;
@@ -580,17 +566,6 @@
               </div>
             </div>
             <div id="mapChart"></div>
-            <div class="legend"><span>lower</span><span class="ramp"></span><span>higher</span></div>
-          </article>
-
-          <article class="panel">
-            <div class="panel-head">
-              <div>
-                <h2>Province Risk Grid</h2>
-                <p class="note">One tile per province, grouped by health region.</p>
-              </div>
-            </div>
-            <div id="tileGrid" class="tile-grid"></div>
             <div class="legend"><span>lower</span><span class="ramp"></span><span>higher</span></div>
           </article>
 
@@ -898,22 +873,6 @@
           </div>`;
       }
 
-      function drawTiles(activeRows, metric) {
-        const values = activeRows.map((row) => metricValue(row, metric));
-        const sorted = [...activeRows].sort(
-          (a, b) =>
-            Number(a.health_region || 99) - Number(b.health_region || 99) ||
-            String(a.province_en).localeCompare(String(b.province_en))
-        );
-        document.querySelector("#tileGrid").innerHTML = sorted
-          .map((row) => {
-            const value = metricValue(row, metric);
-            const title = `${row.province_en || row.province}: ${fmt(value, 2)} ${metricDefs[metric].unit}; region ${row.health_region || "n/a"}`;
-            return `<div class="tile" title="${title}" style="background:${colorScale(value, values)}"></div>`;
-          })
-          .join("");
-      }
-
       function geoBounds(features) {
         const bounds = [Infinity, Infinity, -Infinity, -Infinity];
         const visit = (coords) => {
@@ -1147,7 +1106,6 @@
 
         drawTrend(healthField, selectedYear);
         drawMap(activeRows, metric);
-        drawTiles(activeRows, metric);
         document.querySelector("#rankNote").textContent = `${metricDefs[metric].label} in ${selectedYear}.`;
         drawBars(
           "#rankChart",
