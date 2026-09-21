@@ -1,0 +1,810 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Data Analysis — Wildfire Health Atlas</title>
+    <style>
+      :root {
+        --paper: #f7f4ed;
+        --paper-raised: #fffdf7;
+        --ash-line: rgba(60, 57, 48, 0.14);
+        --ash-line-strong: rgba(60, 57, 48, 0.28);
+        --ink: #24231f;
+        --ink-soft: #625e53;
+        --ink-faint: #918b7d;
+        --forest: #1f6650;
+        --water: #297a8c;
+        --ember: #c45833;
+        --saffron: #d69a2d;
+        --smoke: #d8d2c5;
+        --control: #efeadf;
+        --focus: rgba(196, 88, 51, 0.22);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        color: var(--ink);
+        background: var(--paper);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      .shell {
+        display: grid;
+        grid-template-columns: 260px minmax(0, 1fr);
+        min-height: 100vh;
+      }
+
+      aside {
+        border-right: 1px solid var(--ash-line);
+        padding: 24px 20px;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        background: rgba(247, 244, 237, 0.94);
+      }
+
+      main {
+        padding: 24px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 24px;
+        line-height: 1.08;
+        max-width: 14ch;
+      }
+
+      h2 {
+        font-size: 17px;
+      }
+
+      h3 {
+        font-size: 13px;
+        color: var(--ink-soft);
+        font-weight: 700;
+      }
+
+      .lede {
+        color: var(--ink-soft);
+        font-size: 13px;
+        line-height: 1.55;
+        margin-top: 14px;
+      }
+
+      .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 18px;
+        color: var(--ink-soft);
+        font-size: 12px;
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .back-link:hover {
+        color: var(--ember);
+      }
+
+      .side-note {
+        margin-top: 26px;
+        padding: 12px;
+        border: 1px solid var(--ash-line);
+        border-radius: 8px;
+        background: var(--paper-raised);
+        color: var(--ink-soft);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .side-note strong {
+        color: var(--ink);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 16px;
+      }
+
+      .panel {
+        background: var(--paper-raised);
+        border: 1px solid var(--ash-line);
+        border-radius: 8px;
+        padding: 16px;
+      }
+
+      .panel.wide {
+        grid-column: 1 / -1;
+      }
+
+      .panel-head {
+        display: flex;
+        align-items: start;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .note {
+        color: var(--ink-faint);
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
+      .headline {
+        background: var(--ink);
+        color: var(--paper);
+        border-radius: 8px;
+        padding: 18px;
+        margin-bottom: 16px;
+      }
+
+      .headline .kicker {
+        color: var(--saffron);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .headline h1 {
+        max-width: none;
+        margin-top: 8px;
+      }
+
+      .headline p {
+        color: rgba(247, 244, 237, 0.78);
+        font-size: 14px;
+        line-height: 1.6;
+        margin-top: 10px;
+        max-width: 74ch;
+      }
+
+      svg {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .axis,
+      .grid-line {
+        stroke: var(--ash-line);
+        stroke-width: 1;
+      }
+
+      .tick {
+        fill: var(--ink-faint);
+        font-size: 11px;
+      }
+
+      .bar-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .bar-row {
+        display: grid;
+        grid-template-columns: minmax(150px, 40%) minmax(80px, 1fr) 96px;
+        gap: 12px;
+        align-items: center;
+        min-height: 24px;
+      }
+
+      .bar-name {
+        color: var(--ink-soft);
+        font-size: 13px;
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+      }
+
+      .bar-track {
+        background: rgba(216, 210, 197, 0.55);
+        border-radius: 999px;
+        height: 18px;
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      .bar-fill {
+        border-radius: inherit;
+        height: 100%;
+        min-width: 2px;
+      }
+
+      .bar-fill.faint {
+        opacity: 0.42;
+      }
+
+      .bar-value {
+        color: var(--ink-soft);
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+        line-height: 1.3;
+      }
+
+      .sig-tag {
+        display: inline-block;
+        font-size: 10px;
+        font-weight: 800;
+        margin-left: 4px;
+      }
+
+      .sig-tag.yes {
+        color: var(--forest);
+      }
+
+      .sig-tag.no {
+        color: var(--ink-faint);
+      }
+
+      .toggle-group {
+        display: flex;
+        gap: 6px;
+      }
+
+      .toggle-btn {
+        border: 1px solid var(--ash-line);
+        background: var(--control);
+        color: var(--ink-soft);
+        font: inherit;
+        font-size: 12px;
+        font-weight: 700;
+        border-radius: 6px;
+        padding: 7px 12px;
+        cursor: pointer;
+      }
+
+      .toggle-btn.active {
+        background: var(--ink);
+        color: var(--paper);
+        border-color: var(--ink);
+      }
+
+      .toggle-btn:hover:not(.active) {
+        border-color: var(--ash-line-strong);
+      }
+
+      .group-caption {
+        color: var(--ink);
+        font-size: 12px;
+        font-weight: 800;
+        margin: 14px 0 8px;
+      }
+
+      .group-caption:first-child {
+        margin-top: 0;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--ash-line);
+        padding: 8px 6px;
+        text-align: right;
+        vertical-align: top;
+      }
+
+      th:first-child,
+      td:first-child {
+        text-align: left;
+      }
+
+      th {
+        color: var(--ink-soft);
+        font-size: 11px;
+      }
+
+      .flow-caption {
+        color: var(--ink-soft);
+        font-size: 13px;
+        line-height: 1.55;
+        margin-top: 12px;
+      }
+
+      .flow-node text {
+        fill: var(--ink);
+        font-size: 11.5px;
+      }
+
+      .flow-node .sub {
+        fill: var(--ink-faint);
+        font-size: 10px;
+      }
+
+      .flow-edge {
+        fill: none;
+        stroke: var(--ink-soft);
+        stroke-width: 1.6;
+      }
+
+      .flow-edge.confound {
+        stroke: var(--ember);
+        stroke-dasharray: 4 3;
+        stroke-width: 1.3;
+      }
+
+      .two-col {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 20px;
+      }
+
+      .two-col ul {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--ink-soft);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      .two-col li {
+        margin-bottom: 8px;
+      }
+
+      .footer {
+        color: var(--ink-faint);
+        font-size: 12px;
+        line-height: 1.5;
+        margin: 18px 0 4px;
+      }
+
+      code {
+        background: var(--control);
+        border-radius: 4px;
+        padding: 1px 5px;
+        font-size: 11.5px;
+      }
+
+      @media (max-width: 980px) {
+        .shell {
+          grid-template-columns: 1fr;
+        }
+
+        aside {
+          height: auto;
+          position: static;
+          border-right: 0;
+          border-bottom: 1px solid var(--ash-line);
+        }
+
+        h1 {
+          max-width: none;
+        }
+
+        .grid,
+        .two-col {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 620px) {
+        main {
+          padding: 14px;
+        }
+
+        .panel {
+          padding: 12px;
+        }
+
+        .bar-row {
+          grid-template-columns: 1fr 80px;
+          gap: 6px 10px;
+        }
+
+        .bar-track {
+          grid-column: 1 / -1;
+          grid-row: 2;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <aside>
+        <a class="back-link" href="./index.html">&larr; Dashboard</a>
+        <h1>Data Analysis</h1>
+        <p class="lede">
+          สถิติที่คำนวณจาก <code>clean_province_year.csv</code> (77 จังหวัด &times;
+          ปี 2015&ndash;2023) เพื่อตรวจสอบห่วงโซ่ ไฟป่า &rarr; PM2.5 &rarr; สุขภาพจิต
+          และตัวแปรกวนที่บดบังความสัมพันธ์นั้น
+        </p>
+        <div class="side-note">
+          <strong>วิธีอ่านหน้านี้:</strong> เริ่มจากแผนภาพห่วงโซ่ความสัมพันธ์ แล้วดูว่า
+          ความสัมพันธ์ดิบเปลี่ยนไปแค่ไหนเมื่อคุมจังหวัด/ปี &mdash; นี่คือประเด็นหลักของ
+          การวิเคราะห์ชุดนี้
+        </div>
+        <div class="side-note">
+          ตัวเลขทั้งหมดคำนวณไว้แล้วในโปรเจกต์นี้ (pandas/scipy/statsmodels) ไม่ใช่ข้อมูล
+          สมมติ &mdash; ดูรายละเอียดเพิ่มเติมได้ที่ <code>DATA_STORYTELLING_ANALYSIS.md</code>
+        </div>
+      </aside>
+
+      <main>
+        <div class="headline">
+          <div class="kicker">Headline finding</div>
+          <h1 style="font-size: 20px">
+            เมื่อคุมจังหวัดและปี สัญญาณ "ไฟป่า/PM2.5 ทำให้สุขภาพจิตแย่ลง" เกือบทั้งหมดหายไป
+          </h1>
+          <p>
+            ความสัมพันธ์ดิบที่ดูเหมือนมี (เช่น พื้นที่ไฟป่า vs อัตราซึมเศร้า r=0.29) ส่วนใหญ่อธิบายได้
+            ด้วย "จังหวัดไหนก็ตามที่มีไฟป่า/PM2.5 สูงเป็นทุนเดิม" ไม่ใช่ปีที่ไฟป่ารุนแรงขึ้นแล้ว
+            สุขภาพจิตแย่ลงตาม ข้อมูลชุดนี้ยังไม่พอจะสรุปว่าไฟป่า/PM2.5 เป็น "สาเหตุ" ของปัญหาสุขภาพจิต
+          </p>
+        </div>
+
+        <section class="grid">
+          <article class="panel wide">
+            <div class="panel-head">
+              <div>
+                <h2>ห่วงโซ่ความสัมพันธ์ (Causal Chain)</h2>
+                <p class="note">
+                  เส้นทึบ = เส้นทางหลักที่ตั้งสมมติฐาน · เส้นประสีส้ม = ตัวแปรกวน (confounder)
+                  ที่ชี้เข้าทั้งสองฝั่งพร้อมกัน
+                </p>
+              </div>
+            </div>
+            <div id="flowChart"></div>
+          </article>
+
+          <article class="panel wide">
+            <div class="panel-head">
+              <div>
+                <h2>1. ไฟป่า &rarr; PM2.5</h2>
+                <p class="note">
+                  ความสัมพันธ์ที่แข็งแรงและเชื่อถือได้ที่สุดในทั้งชุดข้อมูล &mdash;
+                  ไม่เชิงเส้น (Spearman แรงกว่า Pearson มาก)
+                </p>
+              </div>
+            </div>
+            <div id="pm25CorrTable"></div>
+          </article>
+
+          <article class="panel wide">
+            <div class="panel-head">
+              <div>
+                <h2>2. ไฟป่า/PM2.5 &rarr; สุขภาพจิต</h2>
+                <p class="note" id="relationshipNote"></p>
+              </div>
+              <div class="toggle-group">
+                <button class="toggle-btn active" data-view="raw">ความสัมพันธ์ดิบ</button>
+                <button class="toggle-btn" data-view="fixed">คุมตัวแปรกวน (Fixed-effects)</button>
+              </div>
+            </div>
+            <div id="relationshipChart"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>สาเหตุไฟป่า</h2>
+                <p class="note">"เผาไร่" ที่มักถูกโทษเป็นอันดับ 1 จริงๆ อยู่อันดับ 5</p>
+              </div>
+            </div>
+            <div id="causeChart"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>ตัวแปรกวน: เขตสุขภาพ</h2>
+                <p class="note">เขต 1 มีทั้งไฟป่า, PM2.5 และซึมเศร้าสูงสุดพร้อมกัน</p>
+              </div>
+            </div>
+            <div id="regionTable"></div>
+          </article>
+
+          <article class="panel wide">
+            <div class="panel-head">
+              <div>
+                <h2>ข้อจำกัดของข้อมูล &amp; ขั้นตอนถัดไป</h2>
+                <p class="note">สิ่งที่ต้องระบุคู่กับทุกกราฟก่อนสรุปผล</p>
+              </div>
+            </div>
+            <div class="two-col">
+              <div>
+                <div class="group-caption">ข้อจำกัด</div>
+                <ul id="limitList"></ul>
+              </div>
+              <div>
+                <div class="group-caption">ถ้าจะคำนวณต่อให้แน่นขึ้น</div>
+                <ul id="nextList"></ul>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <p class="footer">
+          ตัวเลขทั้งหมดคำนวณจาก <code>data/processed/clean_province_year.csv</code> และ
+          <code>clean_wildfire_causes_long.csv</code> ด้วย pandas/scipy/statsmodels
+          &mdash; ระดับข้อมูลเป็นจังหวัด-ปี จึงไม่สามารถสรุปเป็นระดับบุคคลได้ (ecological fallacy)
+        </p>
+      </main>
+    </div>
+
+    <script>
+      function fmt(value, digits = 2) {
+        if (!Number.isFinite(value)) return "n/a";
+        return value.toLocaleString(undefined, { maximumFractionDigits: digits });
+      }
+
+      function drawBars(selector, data, valueKey, labelKey, colorFn, valueFmt) {
+        const max = Math.max(...data.map((d) => Math.abs(d[valueKey])), 0.0001);
+        document.querySelector(selector).innerHTML = `
+          <div class="bar-list">
+            ${data
+              .map((d) => {
+                const width = (Math.abs(d[valueKey]) / max) * 100;
+                return `
+                  <div class="bar-row">
+                    <div class="bar-name">${d[labelKey]}</div>
+                    <div class="bar-track"><div class="bar-fill${d.faint ? " faint" : ""}" style="width:${width}%; background:${colorFn(d)}"></div></div>
+                    <div class="bar-value">${valueFmt(d)}</div>
+                  </div>`;
+              })
+              .join("")}
+          </div>`;
+      }
+
+      function sigTag(p) {
+        const isSig = p < 0.05;
+        return `<span class="sig-tag ${isSig ? "yes" : "no"}">${isSig ? "นัยสำคัญ" : "ไม่มีนัยสำคัญ"}</span>`;
+      }
+
+      // --- 1. Wildfire -> PM2.5 correlation table ---
+      const pm25Corr = [
+        { level: "จังหวัด-ปี (n=455)", pearson: 0.24, spearman: 0.62, note: "p<0.0001" },
+        { level: "% พื้นที่เผาไหม้ vs PM2.5 (n=325)", pearson: null, spearman: 0.67, note: "p<0.0001" },
+        { level: "ระดับประเทศต่อปี (n=7)", pearson: 0.93, spearman: null, note: "p=0.003" },
+      ];
+      document.querySelector("#pm25CorrTable").innerHTML = `
+        <table>
+          <thead>
+            <tr><th>ระดับ</th><th>Pearson r</th><th>Spearman &rho;</th><th>p-value</th></tr>
+          </thead>
+          <tbody>
+            ${pm25Corr
+              .map(
+                (d) => `<tr>
+                  <td>${d.level}</td>
+                  <td>${d.pearson === null ? "&mdash;" : fmt(d.pearson)}</td>
+                  <td>${d.spearman === null ? "&mdash;" : fmt(d.spearman)}</td>
+                  <td>${d.note}</td>
+                </tr>`
+              )
+              .join("")}
+          </tbody>
+        </table>`;
+
+      // --- 2. Wildfire/PM2.5 -> mental health: raw vs fixed-effects ---
+      const rawCorr = [
+        { pair: "พื้นที่ไฟป่า vs อัตราซึมเศร้า", r: 0.29, p: 0.00001, pLabel: "p<0.0001" },
+        { pair: "พื้นที่ไฟป่า vs อัตราฆ่าตัวตาย", r: 0.12, p: 0.004, pLabel: "p=0.004" },
+        { pair: "PM2.5 vs อัตราซึมเศร้า", r: 0.1, p: 0.023, pLabel: "p=0.023" },
+        { pair: "PM2.5 vs อัตราวิตกกังวล", r: -0.11, p: 0.01, pLabel: "p=0.010" },
+        { pair: "PM2.5 vs อัตราจิตเภท", r: -0.11, p: 0.015, pLabel: "p=0.015" },
+      ];
+
+      const fixedEffects = [
+        { outcome: "อัตราซึมเศร้า", wildfire: { coef: -1.19, p: 0.72 }, pm25: { coef: -7.92, p: 0.004 } },
+        { outcome: "อัตราวิตกกังวล", wildfire: { coef: -8.13, p: 0.034 }, pm25: { coef: -4.78, p: 0.13 } },
+        { outcome: "อัตราฆ่าตัวตาย", wildfire: { coef: 0.14, p: 0.61 }, pm25: { coef: 0.7, p: 0.003 } },
+        { outcome: "อัตราเคสสุขภาพจิตรวม", wildfire: { coef: -7.36, p: 0.75 }, pm25: { coef: -33.3, p: 0.08 } },
+      ];
+
+      const relationshipNotes = {
+        raw: "Pearson r ระหว่างไฟป่า/PM2.5 กับอัตราเคสสุขภาพจิต (ยังไม่คุมตัวแปรกวน) (n=693)",
+        fixed: "สัมประสิทธิ์จาก mental_health_rate ~ log(wildfire_area+1) + pm25_avg + จังหวัด(FE) + ปี(FE), n=448",
+      };
+
+      function renderRaw() {
+        document.querySelector("#relationshipNote").textContent = relationshipNotes.raw;
+        drawBars(
+          "#relationshipChart",
+          rawCorr.map((d) => ({ ...d, faint: Math.abs(d.r) < 0.05 })),
+          "r",
+          "pair",
+          (d) => (d.r >= 0 ? "#1f6650" : "#c45833"),
+          (d) => `r=${fmt(d.r, 2)}<br>${d.pLabel}`
+        );
+      }
+
+      function renderFixed() {
+        document.querySelector("#relationshipNote").textContent = relationshipNotes.fixed;
+        const rows = fixedEffects.flatMap((d) => [
+          { outcome: `${d.outcome} &mdash; log(พื้นที่ไฟป่า)`, coef: d.wildfire.coef, p: d.wildfire.p, group: "wildfire" },
+          { outcome: `${d.outcome} &mdash; PM2.5`, coef: d.pm25.coef, p: d.pm25.p, group: "pm25" },
+        ]);
+        const maxWildfire = Math.max(...rows.filter((r) => r.group === "wildfire").map((r) => Math.abs(r.coef)), 0.0001);
+        const maxPm25 = Math.max(...rows.filter((r) => r.group === "pm25").map((r) => Math.abs(r.coef)), 0.0001);
+        document.querySelector("#relationshipChart").innerHTML = `
+          <div class="bar-list">
+            ${rows
+              .map((d) => {
+                const max = d.group === "wildfire" ? maxWildfire : maxPm25;
+                const width = (Math.abs(d.coef) / max) * 100;
+                const color = d.coef >= 0 ? "#1f6650" : "#c45833";
+                const faint = d.p >= 0.05;
+                return `
+                  <div class="bar-row">
+                    <div class="bar-name">${d.outcome}</div>
+                    <div class="bar-track"><div class="bar-fill${faint ? " faint" : ""}" style="width:${width}%; background:${color}"></div></div>
+                    <div class="bar-value">coef=${fmt(d.coef, 2)}${sigTag(d.p)}</div>
+                  </div>`;
+              })
+              .join("")}
+          </div>
+          <p class="note" style="margin-top: 10px">
+            แท่งถูก normalize แยกกันระหว่างกลุ่ม log(พื้นที่ไฟป่า) และกลุ่ม PM2.5
+            (หน่วย/สเกลของสองตัวแปรนี้ต่างกัน จึงเทียบความยาวข้ามกลุ่มไม่ได้)
+          </p>`;
+      }
+
+      const views = { raw: renderRaw, fixed: renderFixed };
+      document.querySelectorAll(".toggle-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll(".toggle-btn").forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          views[btn.dataset.view]();
+        });
+      });
+      renderRaw();
+
+      // --- Wildfire causes ---
+      const causes = [
+        { cause: "หาของป่า", area: 850.2 },
+        { cause: "ไม่ทราบสาเหตุ", area: 363.4 },
+        { cause: "ล่าสัตว์", area: 157.5 },
+        { cause: "อื่น ๆ", area: 86.3 },
+        { cause: "เผาไร่ (slash-and-burn)", area: 57.1 },
+      ];
+      drawBars(
+        "#causeChart",
+        causes,
+        "area",
+        "cause",
+        () => "#d69a2d",
+        (d) => `${fmt(d.area, 1)} ล้านไร่`
+      );
+
+      // --- Health region confounder table ---
+      const regions = [
+        { region: "1 (เหนือบน)", wildfire: 6960, pm25: 37.3, depression: 725 },
+        { region: "2 (เหนือล่าง)", wildfire: 2891, pm25: 35.5, depression: 528 },
+        { region: "12 (ใต้)", wildfire: 143, pm25: 26.1, depression: 422 },
+        { region: "13 (กทม.)", wildfire: null, pm25: 32.5, depression: 163 },
+      ];
+      document.querySelector("#regionTable").innerHTML = `
+        <table>
+          <thead>
+            <tr><th>เขตสุขภาพ</th><th>ไฟป่าเฉลี่ย (ไร่)</th><th>PM2.5 เฉลี่ย</th><th>ซึมเศร้าเฉลี่ย /100k</th></tr>
+          </thead>
+          <tbody>
+            ${regions
+              .map(
+                (d) => `<tr>
+                  <td>${d.region}</td>
+                  <td>${d.wildfire === null ? "n/a" : fmt(d.wildfire, 0)}</td>
+                  <td>${fmt(d.pm25, 1)}</td>
+                  <td>${fmt(d.depression, 0)}</td>
+                </tr>`
+              )
+              .join("")}
+          </tbody>
+        </table>
+        <p class="note" style="margin-top: 10px">
+          เขต 13 (กทม.) รายงานอัตราซึมเศร้าต่ำสุดทั้งที่ประชากรเมืองมักมีความชุกโรคจิตเวชไม่ต่ำ
+          &mdash; น่าจะสะท้อนการวินิจฉัย/การเข้าถึงบริการมากกว่าความชุกจริง
+        </p>`;
+
+      // --- Limitations & next steps ---
+      const limitations = [
+        "Ecological fallacy: ข้อมูลระดับจังหวัด-ปี ไม่สามารถสรุปเป็นระดับบุคคลได้",
+        "PM2.5 รายปีหยาบเกินไป: ค่าเฉลี่ยทั้งปีกลบพีคช่วงฤดูไฟป่า (ก.พ.-เม.ย.)",
+        "อัตราเคสสุขภาพจิต = ขึ้นกับการวินิจฉัย/การเข้าถึงบริการ ไม่ใช่ความชุกที่แท้จริงล้วนๆ",
+        "n=7-9 ปีที่ระดับประเทศ ทำให้ผลระดับประเทศมีกำลังทางสถิติต่ำ",
+        "2020-2021 เป็น outlier: นโยบาย COVID กระทบทั้งไฟป่าและการเข้าถึงบริการสุขภาพจิตพร้อมกัน",
+      ];
+      const nextSteps = [
+        "เปลี่ยน PM2.5 เป็นค่าเฉลี่ยเฉพาะฤดูไฟป่า แล้วทดสอบ mediation ด้วย Sobel test/bootstrap",
+        "เพิ่มตัวแปรควบคุมเศรษฐกิจ-สังคม (รายได้, สัดส่วนเกษตรกรรม, บุคลากรสุขภาพจิต)",
+        "ใช้ event-study / diff-in-diff รอบปีที่ไฟป่ารุนแรงผิดปกติ (2019-2020, 2023)",
+        "ถ้ามีข้อมูลระดับอำเภอ/รายเดือน จะเพิ่มกำลังทางสถิติและลด ecological fallacy",
+      ];
+      document.querySelector("#limitList").innerHTML = limitations.map((t) => `<li>${t}</li>`).join("");
+      document.querySelector("#nextList").innerHTML = nextSteps.map((t) => `<li>${t}</li>`).join("");
+
+      // --- Causal chain flow diagram ---
+      function flowDiagram() {
+        const width = 900;
+        const height = 300;
+        const nodes = {
+          landuse: { x: 10, y: 20, w: 150, h: 54, label: "การใช้ที่ดิน/พฤติกรรม", sub: "หาของป่า, ล่าสัตว์, เผาไร่" },
+          weather: { x: 10, y: 100, w: 150, h: 54, label: "สภาพอากาศ", sub: "ลมข้ามพรมแดน (ไม่มีในข้อมูล)" },
+          wildfire: { x: 220, y: 20, w: 150, h: 54, label: "ไฟป่า", sub: "จำนวนครั้ง, พื้นที่เผาไหม้" },
+          pm25: { x: 430, y: 60, w: 150, h: 54, label: "PM2.5", sub: "ค่าเฉลี่ยรายปี" },
+          mental: { x: 640, y: 20, w: 150, h: 54, label: "สุขภาพจิต", sub: "อัตราเคส /100k" },
+          region: { x: 220, y: 220, w: 150, h: 54, label: "เขตสุขภาพ", sub: "ภูมิศาสตร์ + เศรษฐานะ" },
+          year: { x: 430, y: 220, w: 150, h: 54, label: "แนวโน้มตามปี", sub: "นโยบาย, COVID" },
+          population: { x: 640, y: 220, w: 150, h: 54, label: "ประชากร", sub: "" },
+        };
+        const center = (n) => [n.x + n.w / 2, n.y + n.h / 2];
+        const edgeRight = (n) => [n.x + n.w, n.y + n.h / 2];
+        const edgeLeft = (n) => [n.x, n.y + n.h / 2];
+        const edgeTop = (n) => [n.x + n.w / 2, n.y];
+        const edgeBottom = (n) => [n.x + n.w / 2, n.y + n.h];
+
+        function curve([x1, y1], [x2, y2]) {
+          const mx = (x1 + x2) / 2;
+          return `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`;
+        }
+
+        const mainEdges = [
+          curve(edgeRight(nodes.landuse), edgeLeft(nodes.wildfire)),
+          curve(edgeRight(nodes.weather), edgeLeft(nodes.pm25)),
+          curve(edgeRight(nodes.wildfire), edgeLeft(nodes.pm25)),
+          curve(edgeRight(nodes.pm25), edgeLeft(nodes.mental)),
+        ];
+        const directEdge = curve(edgeTop(nodes.wildfire), edgeTop(nodes.mental));
+        const confoundEdges = [
+          curve(edgeTop(nodes.region), edgeBottom(nodes.wildfire)),
+          curve(edgeTop(nodes.year), edgeBottom(nodes.pm25)),
+          curve(edgeTop(nodes.population), edgeBottom(nodes.mental)),
+          curve(edgeRight(nodes.region), [nodes.pm25.x + nodes.pm25.w / 2, nodes.pm25.y + nodes.pm25.h]),
+        ];
+
+        const nodeSvg = Object.values(nodes)
+          .map(
+            (n) => `
+              <g class="flow-node">
+                <rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="7" fill="var(--paper)" stroke="var(--ash-line-strong)"></rect>
+                <text x="${n.x + n.w / 2}" y="${n.y + n.h / 2 - (n.sub ? 5 : -3)}" text-anchor="middle" font-weight="700">${n.label}</text>
+                ${n.sub ? `<text class="sub" x="${n.x + n.w / 2}" y="${n.y + n.h / 2 + 12}" text-anchor="middle">${n.sub}</text>` : ""}
+              </g>`
+          )
+          .join("");
+
+        document.querySelector("#flowChart").innerHTML = `
+          <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Causal chain diagram">
+            <defs>
+              <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                <path d="M0,0 L8,4 L0,8 Z" fill="var(--ink-soft)"></path>
+              </marker>
+              <marker id="arrowConfound" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                <path d="M0,0 L8,4 L0,8 Z" fill="var(--ember)"></path>
+              </marker>
+            </defs>
+            ${mainEdges.map((d) => `<path class="flow-edge" d="${d}" marker-end="url(#arrow)"></path>`).join("")}
+            <path class="flow-edge" d="${directEdge}" marker-end="url(#arrow)"></path>
+            ${confoundEdges.map((d) => `<path class="flow-edge confound" d="${d}" marker-end="url(#arrowConfound)"></path>`).join("")}
+            ${nodeSvg}
+          </svg>
+          <p class="flow-caption">
+            <strong>เส้นบน</strong> (โค้งบางเส้นผ่านด้านบน) = เส้นทางตรงจากไฟป่าสู่สุขภาพจิต (เศรษฐกิจ/อาชีพ/ความเครียดเฉียบพลัน)
+            &middot; <strong style="color: var(--ember)">เส้นประสีส้ม</strong> = ตัวแปรกวนที่ชี้เข้าหลายฝั่งพร้อมกัน
+            &mdash; ถ้าไม่คุมตัวแปรเหล่านี้ ความสัมพันธ์ดิบจะประเมินค่าคลาดเคลื่อนได้ทั้งสูงเกินและกลับทิศ
+          </p>`;
+      }
+      flowDiagram();
+    </script>
+  </body>
+</html>

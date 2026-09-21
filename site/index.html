@@ -441,6 +441,23 @@
         margin: 18px 0 4px;
       }
 
+      .analysis-link {
+        display: block;
+        margin-top: 22px;
+        padding: 10px 14px;
+        border-radius: 6px;
+        background: var(--ink);
+        color: var(--paper);
+        font-size: 13px;
+        font-weight: 700;
+        text-align: center;
+        text-decoration: none;
+      }
+
+      .analysis-link:hover {
+        background: var(--ember);
+      }
+
       @media (max-width: 980px) {
         .shell {
           grid-template-columns: 1fr;
@@ -529,6 +546,7 @@
             <select id="healthSelect"></select>
           </label>
         </div>
+        <a class="analysis-link" href="./analysis.html">Data Analysis &rarr;</a>
       </aside>
 
       <main>
