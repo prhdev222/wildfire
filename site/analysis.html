@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Data Analysis — Wildfire Health Atlas</title>
+    <script src="./data.js"></script>
     <style>
       :root {
         --paper: #f7f4ed;
@@ -257,7 +258,8 @@
         gap: 6px;
       }
 
-      .toggle-btn {
+      .toggle-btn,
+      .rel-tab-btn {
         border: 1px solid var(--ash-line);
         background: var(--control);
         color: var(--ink-soft);
@@ -269,14 +271,60 @@
         cursor: pointer;
       }
 
-      .toggle-btn.active {
+      .toggle-btn.active,
+      .rel-tab-btn.active {
         background: var(--ink);
         color: var(--paper);
         border-color: var(--ink);
       }
 
-      .toggle-btn:hover:not(.active) {
+      .toggle-btn:hover:not(.active),
+      .rel-tab-btn:hover:not(.active) {
         border-color: var(--ash-line-strong);
+      }
+
+      .rel-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 12px;
+      }
+
+      .cond-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin-bottom: 14px;
+        padding: 10px 12px;
+        background: var(--control);
+        border-radius: 6px;
+      }
+
+      .cond-check {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 13px;
+        color: var(--ink-soft);
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .cond-check input {
+        width: 15px;
+        height: 15px;
+        cursor: pointer;
+        accent-color: var(--ink);
+      }
+
+      #progressionTable table {
+        margin-top: 4px;
+      }
+
+      #progressionTable tr.current-state td {
+        background: rgba(31, 102, 80, 0.1);
+        font-weight: 700;
+        color: var(--ink);
       }
 
       .group-caption {
@@ -362,12 +410,6 @@
         margin-bottom: 8px;
       }
 
-      .dag-row {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 16px;
-      }
-
       .dag-edge {
         fill: none;
         stroke-width: 1.3;
@@ -384,7 +426,7 @@
         opacity: 0.55;
       }
 
-      .dag-col {
+      #liveDagWrap {
         border: 1px solid var(--ash-line);
         border-radius: 8px;
         padding: 12px;
@@ -393,24 +435,13 @@
 
       .dag-verdict {
         color: var(--ink-soft);
-        font-size: 12px;
+        font-size: 13px;
         line-height: 1.6;
-        margin-top: 8px;
+        margin-top: 10px;
       }
 
       .dag-verdict strong {
         color: var(--ink);
-      }
-
-      .dag-legend {
-        color: var(--ink-faint);
-        font-size: 12px;
-        line-height: 1.6;
-        margin-bottom: 14px;
-      }
-
-      .dag-legend strong {
-        color: var(--ink-soft);
       }
 
       .footer {
@@ -444,8 +475,7 @@
         }
 
         .grid,
-        .two-col,
-        .dag-row {
+        .two-col {
           grid-template-columns: 1fr;
         }
       }
@@ -588,11 +618,31 @@
           <article class="panel wide">
             <div class="panel-head">
               <div>
-                <h2>สรุปเปรียบเทียบ: อะไรพอสรุป Causal ได้แค่ไหน</h2>
-                <p class="note">เทียบทั้ง 3 ความสัมพันธ์ในชุดข้อมูลนี้ด้วยเกณฑ์เดียวกัน</p>
+                <h2>ตัดตัวแปรกวนทีละตัว: สัมพันธ์กันจริงแค่ไหน</h2>
+                <p class="note">
+                  เลือกความสัมพันธ์ แล้วติ๊กคุมตัวแปรกวนทีละตัว &mdash; DAG และค่าสหสัมพันธ์ (r) จะคำนวณสดจากข้อมูลดิบ
+                  693 แถว (77 จังหวัด &times; ปี 2015&ndash;2023) ทุกครั้งที่ติ๊ก
+                </p>
               </div>
             </div>
-            <div id="causalSummary"></div>
+            <div class="rel-tabs" id="relTabs">
+              <button class="rel-tab-btn active" data-rel="fire_pm25">ไฟป่า &harr; PM2.5</button>
+              <button class="rel-tab-btn" data-rel="fire_dep">ไฟป่า &harr; ซึมเศร้า</button>
+              <button class="rel-tab-btn" data-rel="pm25_dep">PM2.5 &harr; ซึมเศร้า</button>
+            </div>
+            <div class="cond-controls">
+              <label class="cond-check"><input type="checkbox" id="condRegion" /> คุมเขตสุขภาพ (จังหวัดไหนสังกัดเขตไหน)</label>
+              <label class="cond-check"><input type="checkbox" id="condYear" /> คุมปี (แนวโน้มตามเวลา)</label>
+            </div>
+            <div id="liveDagWrap"></div>
+            <div id="liveStat" class="dag-verdict"></div>
+            <div class="group-caption" style="margin-top:16px">ตารางเทียบทั้ง 4 สถานะ (เห็นภาพรวมโดยไม่ต้องคลิก)</div>
+            <div id="progressionTable"></div>
+            <p class="note" style="margin-top: 10px">
+              <strong>ข้อจำกัดของวิธีนี้:</strong> นี่คือ partial correlation ของตัวแปร 2 ตัวหลังหักค่าเฉลี่ยกลุ่มออก
+              (demeaning) ซึ่งเทียบเท่า fixed-effects ทางคณิตศาสตร์สำหรับ panel แบบสมดุลชุดนี้ &mdash; ง่ายกว่ารีเกรสชัน
+              หลายตัวแปรพร้อมกันที่ใช้ใน DATA_STORYTELLING_ANALYSIS.md เล็กน้อย ทิศทาง/ขนาดผลจะใกล้เคียงกัน แต่ตัวเลขอาจไม่เป๊ะเท่ากัน
+            </p>
           </article>
         </section>
 
@@ -869,68 +919,142 @@
       }
       flowDiagram();
 
-      // --- Bottom comparison: causal confidence per relationship, with confounders shown cut vs uncontrolled ---
-      function miniDag(spec) {
-        const width = 340;
+      // --- Interactive: condition on confounders one at a time, live from raw panel data ---
+      const DATA = window.WILDFIRE_DATA;
+      const PANEL = DATA.rows.map((r) => ({
+        ...r,
+        _logFire: Number.isFinite(r.wildfire_area_rai) ? Math.log10(r.wildfire_area_rai + 1) : null,
+        _depRate: r.population ? (r.depression / r.population) * 100000 : null,
+      }));
+
+      function pearsonRXY(pts) {
+        const nn = pts.length;
+        if (nn < 3) return null;
+        const mx = pts.reduce((a, p) => a + p.x, 0) / nn;
+        const my = pts.reduce((a, p) => a + p.y, 0) / nn;
+        let num = 0,
+          dx2 = 0,
+          dy2 = 0;
+        pts.forEach((p) => {
+          const dx = p.x - mx;
+          const dy = p.y - my;
+          num += dx * dy;
+          dx2 += dx * dx;
+          dy2 += dy * dy;
+        });
+        const denom = Math.sqrt(dx2 * dy2);
+        return denom ? num / denom : null;
+      }
+
+      function groupMeans(pts, key) {
+        const sums = {};
+        pts.forEach((p) => {
+          const g = p[key];
+          sums[g] = sums[g] || { x: 0, y: 0, n: 0 };
+          sums[g].x += p.x;
+          sums[g].y += p.y;
+          sums[g].n += 1;
+        });
+        const means = {};
+        Object.keys(sums).forEach((g) => {
+          means[g] = { x: sums[g].x / sums[g].n, y: sums[g].y / sums[g].n };
+        });
+        return means;
+      }
+
+      function computeR(xKey, yKey, byRegion, byYear) {
+        const pts = PANEL.map((r) => ({ x: r[xKey], y: r[yKey], region: r.health_region, year: r.year })).filter(
+          (p) => Number.isFinite(p.x) && Number.isFinite(p.y)
+        );
+        if (!byRegion && !byYear) return { r: pearsonRXY(pts), n: pts.length };
+        const regionMeans = byRegion ? groupMeans(pts, "region") : null;
+        const yearMeans = byYear ? groupMeans(pts, "year") : null;
+        const grandX = pts.reduce((a, p) => a + p.x, 0) / pts.length;
+        const grandY = pts.reduce((a, p) => a + p.y, 0) / pts.length;
+        const resid = pts.map((p) => {
+          let dx = p.x,
+            dy = p.y;
+          if (byRegion && byYear) {
+            dx = p.x - regionMeans[p.region].x - yearMeans[p.year].x + grandX;
+            dy = p.y - regionMeans[p.region].y - yearMeans[p.year].y + grandY;
+          } else if (byRegion) {
+            dx = p.x - regionMeans[p.region].x;
+            dy = p.y - regionMeans[p.region].y;
+          } else if (byYear) {
+            dx = p.x - yearMeans[p.year].x;
+            dy = p.y - yearMeans[p.year].y;
+          }
+          return { x: dx, y: dy };
+        });
+        return { r: pearsonRXY(resid), n: resid.length };
+      }
+
+      const RELATIONSHIPS = {
+        fire_pm25: { source: "ไฟป่า", target: "PM2.5", xKey: "_logFire", yKey: "pm25_avg", extraConfounder: "สภาพอากาศ/ความแล้ง*" },
+        fire_dep: { source: "ไฟป่า", target: "ซึมเศร้า", xKey: "_logFire", yKey: "_depRate", extraConfounder: null },
+        pm25_dep: { source: "PM2.5", target: "ซึมเศร้า", xKey: "pm25_avg", yKey: "_depRate", extraConfounder: null },
+      };
+
+      function edgeStyle(r) {
+        if (r === null) return { color: "#a39c8c", width: 1.4, dash: true };
+        const abs = Math.abs(r);
+        if (abs < 0.1) return { color: "#a39c8c", width: 1.4, dash: true };
+        const width = 1.6 + Math.min(abs, 1) * 2.6;
+        return r > 0 ? { color: "#1f6650", width, dash: false } : { color: "#c45833", width, dash: false };
+      }
+
+      function renderDag(spec, confounders, r) {
+        const width = 420;
         const height = 190;
-        const nodeW = 118;
-        const nodeH = 44;
-        const sourceX = 10;
-        const targetX = width - nodeW - 10;
+        const nodeW = 128;
+        const nodeH = 46;
+        const sourceX = 12;
+        const targetX = width - nodeW - 12;
         const topY = 14;
         const confY = 122;
-        const confW = 104;
+        const confW = 108;
         const confH = 38;
-        const gap = 14;
-        const totalConfWidth = spec.confounders.length * confW + (spec.confounders.length - 1) * gap;
+        const gap = 12;
+        const totalConfWidth = confounders.length * confW + (confounders.length - 1) * gap;
         const confStartX = (width - totalConfWidth) / 2;
-        const confPositions = spec.confounders.map((name, i) => ({
-          name,
-          x: confStartX + i * (confW + gap),
-          y: confY,
-        }));
+        const confPositions = confounders.map((c, i) => ({ ...c, x: confStartX + i * (confW + gap), y: confY }));
         const sourceBottom = [sourceX + nodeW / 2, topY + nodeH];
         const targetBottom = [targetX + nodeW / 2, topY + nodeH];
         const curve = ([x1, y1], [x2, y2]) => {
           const my = (y1 + y2) / 2;
           return `M${x1},${y1} C${x1},${my} ${x2},${my} ${x2},${y2}`;
         };
-        const edgeColor = spec.edgeStrength === "strong" ? "#1f6650" : spec.edgeStrength === "flip" ? "#c45833" : "#a39c8c";
-        const edgeWidth = spec.edgeStrength === "strong" ? 3 : spec.edgeStrength === "flip" ? 2.4 : 1.6;
-        const edgeDash = spec.edgeStrength === "weak" ? ` stroke-dasharray="3 3"` : "";
-        const mainEdge = `<path d="M${sourceX + nodeW},${topY + nodeH / 2} L${targetX},${topY + nodeH / 2}" stroke="${edgeColor}" stroke-width="${edgeWidth}" fill="none" marker-end="url(#dagArrow${spec.edgeStrength})"${edgeDash}></path>`;
+        const style = edgeStyle(r);
+        const mainEdge = `<path d="M${sourceX + nodeW},${topY + nodeH / 2} L${targetX},${topY + nodeH / 2}" stroke="${style.color}" stroke-width="${style.width}" fill="none" marker-end="url(#liveArrow)"${style.dash ? ` stroke-dasharray="3 3"` : ""}></path>`;
         const confEdges = confPositions
           .map((c) => {
             const top = [c.x + confW / 2, c.y];
-            const cls = spec.cut ? "dag-edge cut" : "dag-edge active";
-            const marker = spec.cut ? "dagArrowCut" : "dagArrowActive";
+            const cls = c.cut ? "dag-edge cut" : "dag-edge active";
+            const marker = c.cut ? "dagArrowCut" : "dagArrowActive";
             return `<path class="${cls}" d="${curve(top, sourceBottom)}" marker-end="url(#${marker})"></path><path class="${cls}" d="${curve(top, targetBottom)}" marker-end="url(#${marker})"></path>`;
           })
           .join("");
-        const cutMarks = spec.cut
-          ? confPositions
-              .map((c) => {
-                const mSrcX = (c.x + confW / 2 + sourceBottom[0]) / 2;
-                const mSrcY = (c.y + sourceBottom[1]) / 2 - 6;
-                const mTgtX = (c.x + confW / 2 + targetBottom[0]) / 2;
-                const mTgtY = (c.y + targetBottom[1]) / 2 - 6;
-                return `<text x="${mSrcX}" y="${mSrcY}" text-anchor="middle" font-size="13" fill="var(--ember)">&times;</text><text x="${mTgtX}" y="${mTgtY}" text-anchor="middle" font-size="13" fill="var(--ember)">&times;</text>`;
-              })
-              .join("")
-          : "";
+        const cutMarks = confPositions
+          .filter((c) => c.cut)
+          .map((c) => {
+            const mSrcX = (c.x + confW / 2 + sourceBottom[0]) / 2;
+            const mSrcY = (c.y + sourceBottom[1]) / 2 - 6;
+            const mTgtX = (c.x + confW / 2 + targetBottom[0]) / 2;
+            const mTgtY = (c.y + targetBottom[1]) / 2 - 6;
+            return `<text x="${mSrcX}" y="${mSrcY}" text-anchor="middle" font-size="13" fill="var(--ember)">&times;</text><text x="${mTgtX}" y="${mTgtY}" text-anchor="middle" font-size="13" fill="var(--ember)">&times;</text>`;
+          })
+          .join("");
         const confBoxes = confPositions
           .map(
             (c) => `
-              <rect x="${c.x}" y="${c.y}" width="${confW}" height="${confH}" rx="6" fill="${spec.cut ? "rgba(216,210,197,0.35)" : "rgba(214,154,45,0.14)"}" stroke="var(--ash-line)"></rect>
-              <text x="${c.x + confW / 2}" y="${c.y + confH / 2 + 4}" text-anchor="middle" font-size="10" fill="${spec.cut ? "var(--ink-faint)" : "var(--ink-soft)"}">${c.name}</text>`
+              <rect x="${c.x}" y="${c.y}" width="${confW}" height="${confH}" rx="6" fill="${c.cut ? "rgba(216,210,197,0.35)" : "rgba(214,154,45,0.14)"}" stroke="var(--ash-line)"></rect>
+              <text x="${c.x + confW / 2}" y="${c.y + confH / 2 + 4}" text-anchor="middle" font-size="10" fill="${c.cut ? "var(--ink-faint)" : "var(--ink-soft)"}">${c.name}</text>`
           )
           .join("");
         return `
-          <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${spec.source} to ${spec.target} DAG">
+          <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${spec.source} to ${spec.target} live DAG">
             <defs>
-              <marker id="dagArrowstrong" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#1f6650"></path></marker>
-              <marker id="dagArrowweak" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#a39c8c"></path></marker>
-              <marker id="dagArrowflip" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#c45833"></path></marker>
+              <marker id="liveArrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="${style.color}"></path></marker>
               <marker id="dagArrowActive" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="var(--saffron)"></path></marker>
               <marker id="dagArrowCut" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="var(--ink-faint)"></path></marker>
             </defs>
@@ -938,65 +1062,76 @@
             ${cutMarks}
             ${mainEdge}
             <rect x="${sourceX}" y="${topY}" width="${nodeW}" height="${nodeH}" rx="7" fill="var(--paper)" stroke="var(--ash-line-strong)"></rect>
-            <text x="${sourceX + nodeW / 2}" y="${topY + nodeH / 2 + 4}" text-anchor="middle" font-size="12" font-weight="700" fill="var(--ink)">${spec.source}</text>
+            <text x="${sourceX + nodeW / 2}" y="${topY + nodeH / 2 + 4}" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">${spec.source}</text>
             <rect x="${targetX}" y="${topY}" width="${nodeW}" height="${nodeH}" rx="7" fill="var(--paper)" stroke="var(--ash-line-strong)"></rect>
-            <text x="${targetX + nodeW / 2}" y="${topY + nodeH / 2 + 4}" text-anchor="middle" font-size="12" font-weight="700" fill="var(--ink)">${spec.target}</text>
+            <text x="${targetX + nodeW / 2}" y="${topY + nodeH / 2 + 4}" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">${spec.target}</text>
             ${confBoxes}
-            <text x="${width / 2}" y="${height - 4}" text-anchor="middle" font-size="10.5" fill="var(--ink-soft)">${spec.edgeLabel}</text>
           </svg>`;
       }
 
-      const causalComparisons = [
-        {
-          title: "ไฟป่า &harr; PM2.5",
-          source: "ไฟป่า",
-          target: "PM2.5",
-          confounders: ["สภาพอากาศ/ความแล้ง"],
-          cut: false,
-          edgeStrength: "strong",
-          edgeLabel: "r = 0.24–0.93 ทุกระดับ",
-          verdict: `ความสัมพันธ์แข็งแรงมากในทุกระดับที่ทดสอบ และมีกลไกทางฟิสิกส์รองรับชัดเจน (การเผาไหม้ผลิตฝุ่นควันจริง) แต่<strong>ยังไม่ได้ตัดตัวแปรกวนออก</strong> &mdash; สภาพอากาศ/ความแล้งอาจกระตุ้นทั้งไฟป่าและสะสม PM2.5 พร้อมกันโดยไม่ต้องพึ่งไฟป่าเป็นตัวกลางทั้งหมด และ PM2.5 ยังมาจากแหล่งอื่นได้ (ควันข้ามพรมแดน, เผาไร่นอกพื้นที่บันทึก) <strong>สรุป: น่าจะเป็นหนึ่งในสาเหตุสำคัญ แต่ไม่ใช่สาเหตุเดียวที่พิสูจน์แล้วจากข้อมูลนี้</strong>`,
-        },
-        {
-          title: "ไฟป่า &harr; ซึมเศร้า",
-          source: "ไฟป่า",
-          target: "ซึมเศร้า",
-          confounders: ["เขตสุขภาพ", "แนวโน้มตามปี"],
-          cut: true,
-          edgeStrength: "weak",
-          edgeLabel: "r=0.29 &rarr; coef=-1.19, p=0.72",
-          verdict: `ความสัมพันธ์ดิบ (r=0.29) ดูเหมือนมี แต่หลัง<strong>ตัดตัวแปรกวนเขตสุขภาพและปีออก</strong> (fixed-effects) สัมประสิทธิ์กลายเป็น -1.19 และ<strong>ไม่มีนัยสำคัญทางสถิติ</strong> (p=0.72) แปลว่าความสัมพันธ์ดิบเกิดจาก "จังหวัดที่มีไฟป่าเยอะเป็นทุนเดิมก็มีซึมเศร้าสูงเป็นทุนเดิม" ไม่ใช่ปีที่ไฟป่ารุนแรงขึ้นแล้วซึมเศร้าสูงขึ้นตามในจังหวัดเดียวกัน <strong>สรุป: หลักฐานอ่อนมาก ยังสรุปเป็นเหตุ-ผลไม่ได้</strong>`,
-        },
-        {
-          title: "PM2.5 &harr; ซึมเศร้า",
-          source: "PM2.5",
-          target: "ซึมเศร้า",
-          confounders: ["เขตสุขภาพ", "แนวโน้มตามปี"],
-          cut: true,
-          edgeStrength: "flip",
-          edgeLabel: "r=0.10 &rarr; coef=-7.92, p=0.004",
-          verdict: `ความสัมพันธ์ดิบอ่อนมาก (r=0.10) แต่หลังตัดตัวแปรกวนแล้ว<strong>มีนัยสำคัญทางสถิติ</strong> (p=0.004) &mdash; ทว่า<strong>ทิศทางกลับด้าน</strong> (PM2.5 สูงขึ้น &rarr; ซึมเศร้าลดลง) ซึ่งขัดกับสมมติฐานเดิมที่คาดว่า PM2.5 ควรทำให้สุขภาพจิตแย่ลง ผลแบบนี้มักเกิดจากปัจจัยที่ยังไม่ได้คุม เช่น รูปแบบการวินิจฉัย/การเข้าถึงบริการที่ต่างกันไปตามพื้นที่ <strong>สรุป: มีนัยสำคัญทางสถิติ แต่ทิศทางขัดแย้งกับสมมติฐาน ต้องตีความระวังมาก</strong>`,
-        },
-      ];
+      let currentRel = "fire_pm25";
+      const condRegionEl = document.querySelector("#condRegion");
+      const condYearEl = document.querySelector("#condYear");
 
-      document.querySelector("#causalSummary").innerHTML = `
-        <p class="dag-legend">
-          <strong>วิธีอ่าน:</strong> กล่องพื้นส้มประ = ตัวแปรกวนที่<strong>ยังไม่ได้ตัดออก</strong> (uncontrolled) &middot;
-          กล่องพื้นเทาจาง+เครื่องหมาย &times; = ตัวแปรกวนที่<strong>ตัดออกแล้ว</strong>ด้วยการคุมจังหวัด+ปี (fixed-effects) &middot;
-          เส้นหลัก: <strong style="color:#1f6650">เขียว</strong> = สัมพันธ์กันแรง, <strong style="color:#c45833">ส้ม</strong> = มีนัยสำคัญแต่ทิศทางกลับด้าน, <strong style="color:#a39c8c">เทาบาง</strong> = แทบไม่เหลือความสัมพันธ์
-        </p>
-        <div class="dag-row">
-          ${causalComparisons
-            .map(
-              (c) => `
-                <div class="dag-col">
-                  <div class="group-caption">${c.title}</div>
-                  ${miniDag(c)}
-                  <div class="dag-verdict">${c.verdict}</div>
-                </div>`
-            )
-            .join("")}
-        </div>`;
+      function strengthWord(r) {
+        if (r === null) return "คำนวณไม่ได้";
+        const abs = Math.abs(r);
+        return abs >= 0.5 ? "แรง" : abs >= 0.3 ? "ปานกลาง" : abs >= 0.1 ? "อ่อน" : "แทบไม่มี";
+      }
+
+      function renderInteractive() {
+        const spec = RELATIONSHIPS[currentRel];
+        const byRegion = condRegionEl.checked;
+        const byYear = condYearEl.checked;
+        const confounders = [
+          { name: "เขตสุขภาพ", key: "region", cut: byRegion },
+          { name: "ปี", key: "year", cut: byYear },
+        ];
+        if (spec.extraConfounder) confounders.push({ name: spec.extraConfounder, key: "extra", cut: false });
+
+        const { r, n } = computeR(spec.xKey, spec.yKey, byRegion, byYear);
+        document.querySelector("#liveDagWrap").innerHTML = renderDag(spec, confounders, r);
+
+        const condText =
+          !byRegion && !byYear ? "ไม่คุมอะไรเลย (ความสัมพันธ์ดิบ)" : [byRegion ? "เขตสุขภาพ" : null, byYear ? "ปี" : null].filter(Boolean).join(" + ");
+        document.querySelector("#liveStat").innerHTML = `
+          <strong>${spec.source} &harr; ${spec.target}</strong> &mdash; คุม: <strong>${condText}</strong><br>
+          r = ${fmt(r, 3)} (n=${n}) &mdash; ความสัมพันธ์${strengthWord(r)}, ${r === null ? "" : r > 0.02 ? "ทิศบวก" : r < -0.02 ? "ทิศลบ" : "ไม่มีทิศทางชัดเจน"}
+          ${spec.extraConfounder ? `<br><span class="note">*${spec.extraConfounder.replace("*", "")} ไม่มีข้อมูลในชุดนี้ให้คุมได้ จึงเป็นตัวแปรกวนที่เหลืออยู่เสมอ</span>` : ""}
+        `;
+
+        const combos = [
+          { label: "ไม่คุมเลย", byRegion: false, byYear: false },
+          { label: "คุมเขตสุขภาพ", byRegion: true, byYear: false },
+          { label: "คุมปี", byRegion: false, byYear: true },
+          { label: "คุมทั้งคู่", byRegion: true, byYear: true },
+        ];
+        document.querySelector("#progressionTable").innerHTML = `
+          <table>
+            <thead><tr><th>คุมตัวแปรกวน</th><th>r</th><th>n</th><th>ความแรง</th></tr></thead>
+            <tbody>
+              ${combos
+                .map((c) => {
+                  const res = computeR(spec.xKey, spec.yKey, c.byRegion, c.byYear);
+                  const isCurrent = c.byRegion === byRegion && c.byYear === byYear;
+                  return `<tr${isCurrent ? ' class="current-state"' : ""}><td>${c.label}</td><td>${fmt(res.r, 3)}</td><td>${res.n}</td><td>${strengthWord(res.r)}</td></tr>`;
+                })
+                .join("")}
+            </tbody>
+          </table>`;
+      }
+
+      document.querySelectorAll(".rel-tab-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll(".rel-tab-btn").forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          currentRel = btn.dataset.rel;
+          renderInteractive();
+        });
+      });
+      condRegionEl.addEventListener("change", renderInteractive);
+      condYearEl.addEventListener("change", renderInteractive);
+      renderInteractive();
     </script>
   </body>
 </html>
