@@ -608,7 +608,7 @@
             <div class="panel-head">
               <div>
                 <h2>Wildfire and PM2.5</h2>
-                <p class="note">Bubble size follows the selected health rate.</p>
+                <p class="note">Each dot is a province. Dashed line shows the trend.</p>
               </div>
             </div>
             <div id="scatterChart"></div>
@@ -988,6 +988,19 @@
           </div>`;
       }
 
+      function linearFit(points, xKey, yKey) {
+        const n = points.length;
+        const sumX = points.reduce((a, d) => a + d[xKey], 0);
+        const sumY = points.reduce((a, d) => a + d[yKey], 0);
+        const sumXY = points.reduce((a, d) => a + d[xKey] * d[yKey], 0);
+        const sumXX = points.reduce((a, d) => a + d[xKey] * d[xKey], 0);
+        const denom = n * sumXX - sumX * sumX;
+        if (!denom) return null;
+        const slope = (n * sumXY - sumX * sumY) / denom;
+        const intercept = (sumY - slope * sumX) / n;
+        return { slope, intercept };
+      }
+
       function drawScatter(activeRows, healthField) {
         const data = activeRows.filter((r) => Number.isFinite(r.wildfire_area_rai) && Number.isFinite(r.pm25_avg));
         const width = 470;
@@ -995,24 +1008,41 @@
         const pad = { top: 16, right: 18, bottom: 42, left: 54 };
         const maxX = Math.max(...data.map((d) => d.wildfire_area_rai), 1);
         const maxY = Math.max(...data.map((d) => d.pm25_avg), 1);
-        const rates = data.map((d) => rate(d, healthField)).filter(Number.isFinite);
-        const maxRate = Math.max(...rates, 1);
-        const x = (d) => pad.left + (d.wildfire_area_rai / maxX) * (width - pad.left - pad.right);
-        const y = (d) => height - pad.bottom - (d.pm25_avg / maxY) * (height - pad.top - pad.bottom);
+        const x = (value) => pad.left + (value / maxX) * (width - pad.left - pad.right);
+        const y = (value) => height - pad.bottom - (value / maxY) * (height - pad.top - pad.bottom);
+        const xTicks = [0, 0.25, 0.5, 0.75, 1].map((t) => t * maxX);
+        const yTicks = [0, 0.25, 0.5, 0.75, 1].map((t) => t * maxY);
+        const fit = linearFit(data, "wildfire_area_rai", "pm25_avg");
         document.querySelector("#scatterChart").innerHTML = `
           <svg viewBox="0 0 ${width} ${height}">
+            ${yTicks
+              .map(
+                (t) =>
+                  `<line class="grid-line" x1="${pad.left}" x2="${width - pad.right}" y1="${y(t)}" y2="${y(t)}"></line>
+                   <text class="tick" x="${pad.left - 6}" y="${y(t) + 3}" text-anchor="end">${compact(t)}</text>`
+              )
+              .join("")}
+            ${xTicks
+              .map(
+                (t) =>
+                  `<text class="tick" x="${x(t)}" y="${height - pad.bottom + 16}" text-anchor="middle">${compact(t)}</text>`
+              )
+              .join("")}
             <line class="axis" x1="${pad.left}" x2="${width - pad.right}" y1="${height - pad.bottom}" y2="${height - pad.bottom}"></line>
             <line class="axis" x1="${pad.left}" x2="${pad.left}" y1="${pad.top}" y2="${height - pad.bottom}"></line>
+            ${fit
+              ? `<line x1="${x(0)}" x2="${x(maxX)}" y1="${y(fit.intercept)}" y2="${y(fit.intercept + fit.slope * maxX)}" stroke="#24231f" stroke-width="1.6" stroke-dasharray="5 4"></line>`
+              : ""}
             ${data
               .map((d) => {
                 const r = rate(d, healthField);
-                const size = 4 + (n(r) / maxRate) * 11;
-                return `<circle cx="${x(d)}" cy="${y(d)}" r="${size}" fill="rgba(196,88,51,.58)" stroke="#6d2f24"><title>${d.province_en}: ${fmt(d.wildfire_area_rai)} rai, PM2.5 ${fmt(d.pm25_avg, 1)}, ${healthLabels[healthField]} ${fmt(r, 1)} /100k</title></circle>`;
+                return `<circle cx="${x(d.wildfire_area_rai)}" cy="${y(d.pm25_avg)}" r="4.5" fill="rgba(196,88,51,.58)" stroke="#6d2f24"><title>${d.province_en}: ${fmt(d.wildfire_area_rai)} rai, PM2.5 ${fmt(d.pm25_avg, 1)}, ${healthLabels[healthField]} ${fmt(r, 1)} /100k</title></circle>`;
               })
               .join("")}
-            <text class="tick" x="${width / 2}" y="${height - 8}" text-anchor="middle">wildfire area</text>
-            <text class="tick" transform="translate(14 ${height / 2}) rotate(-90)" text-anchor="middle">PM2.5</text>
-          </svg>`;
+            <text class="tick" x="${width / 2}" y="${height - 6}" text-anchor="middle">wildfire area (rai)</text>
+            <text class="tick" transform="translate(14 ${height / 2}) rotate(-90)" text-anchor="middle">PM2.5 (µg/m³)</text>
+          </svg>
+          <p class="note" style="margin-top: 6px">เส้นประ = แนวโน้มความสัมพันธ์ (linear trend); วางเมาส์บนจุดเพื่อดู${healthLabels[healthField].toLowerCase()}รายจังหวัด</p>`;
       }
 
       function drawRegion(activeRows, healthField) {
