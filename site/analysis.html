@@ -290,6 +290,7 @@
         margin-top: 0;
       }
 
+
       table {
         width: 100%;
         border-collapse: collapse;
@@ -361,6 +362,57 @@
         margin-bottom: 8px;
       }
 
+      .dag-row {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .dag-edge {
+        fill: none;
+        stroke-width: 1.3;
+      }
+
+      .dag-edge.active {
+        stroke: var(--saffron);
+        stroke-dasharray: 4 3;
+      }
+
+      .dag-edge.cut {
+        stroke: var(--ink-faint);
+        stroke-dasharray: 2 3;
+        opacity: 0.55;
+      }
+
+      .dag-col {
+        border: 1px solid var(--ash-line);
+        border-radius: 8px;
+        padding: 12px;
+        background: var(--paper);
+      }
+
+      .dag-verdict {
+        color: var(--ink-soft);
+        font-size: 12px;
+        line-height: 1.6;
+        margin-top: 8px;
+      }
+
+      .dag-verdict strong {
+        color: var(--ink);
+      }
+
+      .dag-legend {
+        color: var(--ink-faint);
+        font-size: 12px;
+        line-height: 1.6;
+        margin-bottom: 14px;
+      }
+
+      .dag-legend strong {
+        color: var(--ink-soft);
+      }
+
       .footer {
         color: var(--ink-faint);
         font-size: 12px;
@@ -392,7 +444,8 @@
         }
 
         .grid,
-        .two-col {
+        .two-col,
+        .dag-row {
           grid-template-columns: 1fr;
         }
       }
@@ -530,6 +583,16 @@
                 <ul id="nextList"></ul>
               </div>
             </div>
+          </article>
+
+          <article class="panel wide">
+            <div class="panel-head">
+              <div>
+                <h2>สรุปเปรียบเทียบ: อะไรพอสรุป Causal ได้แค่ไหน</h2>
+                <p class="note">เทียบทั้ง 3 ความสัมพันธ์ในชุดข้อมูลนี้ด้วยเกณฑ์เดียวกัน</p>
+              </div>
+            </div>
+            <div id="causalSummary"></div>
           </article>
         </section>
 
@@ -805,6 +868,135 @@
           </p>`;
       }
       flowDiagram();
+
+      // --- Bottom comparison: causal confidence per relationship, with confounders shown cut vs uncontrolled ---
+      function miniDag(spec) {
+        const width = 340;
+        const height = 190;
+        const nodeW = 118;
+        const nodeH = 44;
+        const sourceX = 10;
+        const targetX = width - nodeW - 10;
+        const topY = 14;
+        const confY = 122;
+        const confW = 104;
+        const confH = 38;
+        const gap = 14;
+        const totalConfWidth = spec.confounders.length * confW + (spec.confounders.length - 1) * gap;
+        const confStartX = (width - totalConfWidth) / 2;
+        const confPositions = spec.confounders.map((name, i) => ({
+          name,
+          x: confStartX + i * (confW + gap),
+          y: confY,
+        }));
+        const sourceBottom = [sourceX + nodeW / 2, topY + nodeH];
+        const targetBottom = [targetX + nodeW / 2, topY + nodeH];
+        const curve = ([x1, y1], [x2, y2]) => {
+          const my = (y1 + y2) / 2;
+          return `M${x1},${y1} C${x1},${my} ${x2},${my} ${x2},${y2}`;
+        };
+        const edgeColor = spec.edgeStrength === "strong" ? "#1f6650" : spec.edgeStrength === "flip" ? "#c45833" : "#a39c8c";
+        const edgeWidth = spec.edgeStrength === "strong" ? 3 : spec.edgeStrength === "flip" ? 2.4 : 1.6;
+        const edgeDash = spec.edgeStrength === "weak" ? ` stroke-dasharray="3 3"` : "";
+        const mainEdge = `<path d="M${sourceX + nodeW},${topY + nodeH / 2} L${targetX},${topY + nodeH / 2}" stroke="${edgeColor}" stroke-width="${edgeWidth}" fill="none" marker-end="url(#dagArrow${spec.edgeStrength})"${edgeDash}></path>`;
+        const confEdges = confPositions
+          .map((c) => {
+            const top = [c.x + confW / 2, c.y];
+            const cls = spec.cut ? "dag-edge cut" : "dag-edge active";
+            const marker = spec.cut ? "dagArrowCut" : "dagArrowActive";
+            return `<path class="${cls}" d="${curve(top, sourceBottom)}" marker-end="url(#${marker})"></path><path class="${cls}" d="${curve(top, targetBottom)}" marker-end="url(#${marker})"></path>`;
+          })
+          .join("");
+        const cutMarks = spec.cut
+          ? confPositions
+              .map((c) => {
+                const mSrcX = (c.x + confW / 2 + sourceBottom[0]) / 2;
+                const mSrcY = (c.y + sourceBottom[1]) / 2 - 6;
+                const mTgtX = (c.x + confW / 2 + targetBottom[0]) / 2;
+                const mTgtY = (c.y + targetBottom[1]) / 2 - 6;
+                return `<text x="${mSrcX}" y="${mSrcY}" text-anchor="middle" font-size="13" fill="var(--ember)">&times;</text><text x="${mTgtX}" y="${mTgtY}" text-anchor="middle" font-size="13" fill="var(--ember)">&times;</text>`;
+              })
+              .join("")
+          : "";
+        const confBoxes = confPositions
+          .map(
+            (c) => `
+              <rect x="${c.x}" y="${c.y}" width="${confW}" height="${confH}" rx="6" fill="${spec.cut ? "rgba(216,210,197,0.35)" : "rgba(214,154,45,0.14)"}" stroke="var(--ash-line)"></rect>
+              <text x="${c.x + confW / 2}" y="${c.y + confH / 2 + 4}" text-anchor="middle" font-size="10" fill="${spec.cut ? "var(--ink-faint)" : "var(--ink-soft)"}">${c.name}</text>`
+          )
+          .join("");
+        return `
+          <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${spec.source} to ${spec.target} DAG">
+            <defs>
+              <marker id="dagArrowstrong" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#1f6650"></path></marker>
+              <marker id="dagArrowweak" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#a39c8c"></path></marker>
+              <marker id="dagArrowflip" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#c45833"></path></marker>
+              <marker id="dagArrowActive" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="var(--saffron)"></path></marker>
+              <marker id="dagArrowCut" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="var(--ink-faint)"></path></marker>
+            </defs>
+            ${confEdges}
+            ${cutMarks}
+            ${mainEdge}
+            <rect x="${sourceX}" y="${topY}" width="${nodeW}" height="${nodeH}" rx="7" fill="var(--paper)" stroke="var(--ash-line-strong)"></rect>
+            <text x="${sourceX + nodeW / 2}" y="${topY + nodeH / 2 + 4}" text-anchor="middle" font-size="12" font-weight="700" fill="var(--ink)">${spec.source}</text>
+            <rect x="${targetX}" y="${topY}" width="${nodeW}" height="${nodeH}" rx="7" fill="var(--paper)" stroke="var(--ash-line-strong)"></rect>
+            <text x="${targetX + nodeW / 2}" y="${topY + nodeH / 2 + 4}" text-anchor="middle" font-size="12" font-weight="700" fill="var(--ink)">${spec.target}</text>
+            ${confBoxes}
+            <text x="${width / 2}" y="${height - 4}" text-anchor="middle" font-size="10.5" fill="var(--ink-soft)">${spec.edgeLabel}</text>
+          </svg>`;
+      }
+
+      const causalComparisons = [
+        {
+          title: "ไฟป่า &harr; PM2.5",
+          source: "ไฟป่า",
+          target: "PM2.5",
+          confounders: ["สภาพอากาศ/ความแล้ง"],
+          cut: false,
+          edgeStrength: "strong",
+          edgeLabel: "r = 0.24–0.93 ทุกระดับ",
+          verdict: `ความสัมพันธ์แข็งแรงมากในทุกระดับที่ทดสอบ และมีกลไกทางฟิสิกส์รองรับชัดเจน (การเผาไหม้ผลิตฝุ่นควันจริง) แต่<strong>ยังไม่ได้ตัดตัวแปรกวนออก</strong> &mdash; สภาพอากาศ/ความแล้งอาจกระตุ้นทั้งไฟป่าและสะสม PM2.5 พร้อมกันโดยไม่ต้องพึ่งไฟป่าเป็นตัวกลางทั้งหมด และ PM2.5 ยังมาจากแหล่งอื่นได้ (ควันข้ามพรมแดน, เผาไร่นอกพื้นที่บันทึก) <strong>สรุป: น่าจะเป็นหนึ่งในสาเหตุสำคัญ แต่ไม่ใช่สาเหตุเดียวที่พิสูจน์แล้วจากข้อมูลนี้</strong>`,
+        },
+        {
+          title: "ไฟป่า &harr; ซึมเศร้า",
+          source: "ไฟป่า",
+          target: "ซึมเศร้า",
+          confounders: ["เขตสุขภาพ", "แนวโน้มตามปี"],
+          cut: true,
+          edgeStrength: "weak",
+          edgeLabel: "r=0.29 &rarr; coef=-1.19, p=0.72",
+          verdict: `ความสัมพันธ์ดิบ (r=0.29) ดูเหมือนมี แต่หลัง<strong>ตัดตัวแปรกวนเขตสุขภาพและปีออก</strong> (fixed-effects) สัมประสิทธิ์กลายเป็น -1.19 และ<strong>ไม่มีนัยสำคัญทางสถิติ</strong> (p=0.72) แปลว่าความสัมพันธ์ดิบเกิดจาก "จังหวัดที่มีไฟป่าเยอะเป็นทุนเดิมก็มีซึมเศร้าสูงเป็นทุนเดิม" ไม่ใช่ปีที่ไฟป่ารุนแรงขึ้นแล้วซึมเศร้าสูงขึ้นตามในจังหวัดเดียวกัน <strong>สรุป: หลักฐานอ่อนมาก ยังสรุปเป็นเหตุ-ผลไม่ได้</strong>`,
+        },
+        {
+          title: "PM2.5 &harr; ซึมเศร้า",
+          source: "PM2.5",
+          target: "ซึมเศร้า",
+          confounders: ["เขตสุขภาพ", "แนวโน้มตามปี"],
+          cut: true,
+          edgeStrength: "flip",
+          edgeLabel: "r=0.10 &rarr; coef=-7.92, p=0.004",
+          verdict: `ความสัมพันธ์ดิบอ่อนมาก (r=0.10) แต่หลังตัดตัวแปรกวนแล้ว<strong>มีนัยสำคัญทางสถิติ</strong> (p=0.004) &mdash; ทว่า<strong>ทิศทางกลับด้าน</strong> (PM2.5 สูงขึ้น &rarr; ซึมเศร้าลดลง) ซึ่งขัดกับสมมติฐานเดิมที่คาดว่า PM2.5 ควรทำให้สุขภาพจิตแย่ลง ผลแบบนี้มักเกิดจากปัจจัยที่ยังไม่ได้คุม เช่น รูปแบบการวินิจฉัย/การเข้าถึงบริการที่ต่างกันไปตามพื้นที่ <strong>สรุป: มีนัยสำคัญทางสถิติ แต่ทิศทางขัดแย้งกับสมมติฐาน ต้องตีความระวังมาก</strong>`,
+        },
+      ];
+
+      document.querySelector("#causalSummary").innerHTML = `
+        <p class="dag-legend">
+          <strong>วิธีอ่าน:</strong> กล่องพื้นส้มประ = ตัวแปรกวนที่<strong>ยังไม่ได้ตัดออก</strong> (uncontrolled) &middot;
+          กล่องพื้นเทาจาง+เครื่องหมาย &times; = ตัวแปรกวนที่<strong>ตัดออกแล้ว</strong>ด้วยการคุมจังหวัด+ปี (fixed-effects) &middot;
+          เส้นหลัก: <strong style="color:#1f6650">เขียว</strong> = สัมพันธ์กันแรง, <strong style="color:#c45833">ส้ม</strong> = มีนัยสำคัญแต่ทิศทางกลับด้าน, <strong style="color:#a39c8c">เทาบาง</strong> = แทบไม่เหลือความสัมพันธ์
+        </p>
+        <div class="dag-row">
+          ${causalComparisons
+            .map(
+              (c) => `
+                <div class="dag-col">
+                  <div class="group-caption">${c.title}</div>
+                  ${miniDag(c)}
+                  <div class="dag-verdict">${c.verdict}</div>
+                </div>`
+            )
+            .join("")}
+        </div>`;
     </script>
   </body>
 </html>
