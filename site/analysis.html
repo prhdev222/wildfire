@@ -317,6 +317,22 @@
         accent-color: var(--ink);
       }
 
+      .cond-check select {
+        border: 1px solid var(--ash-line);
+        border-radius: 5px;
+        background: var(--paper);
+        color: var(--ink);
+        font: inherit;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 5px 8px;
+        cursor: pointer;
+      }
+
+      #healthFieldWrap[hidden] {
+        display: none;
+      }
+
       #progressionTable table {
         margin-top: 4px;
       }
@@ -627,10 +643,14 @@
             </div>
             <div class="rel-tabs" id="relTabs">
               <button class="rel-tab-btn active" data-rel="fire_pm25">ไฟป่า &harr; PM2.5</button>
-              <button class="rel-tab-btn" data-rel="fire_dep">ไฟป่า &harr; ซึมเศร้า</button>
-              <button class="rel-tab-btn" data-rel="pm25_dep">PM2.5 &harr; ซึมเศร้า</button>
+              <button class="rel-tab-btn" data-rel="fire_health">ไฟป่า &harr; สุขภาพจิต</button>
+              <button class="rel-tab-btn" data-rel="pm25_health">PM2.5 &harr; สุขภาพจิต</button>
             </div>
             <div class="cond-controls">
+              <label class="cond-check" id="healthFieldWrap" hidden>
+                โรค:
+                <select id="healthFieldSelect"></select>
+              </label>
               <label class="cond-check"><input type="checkbox" id="condRegion" /> คุมเขตสุขภาพ (จังหวัดไหนสังกัดเขตไหน)</label>
               <label class="cond-check"><input type="checkbox" id="condYear" /> คุมปี (แนวโน้มตามเวลา)</label>
             </div>
@@ -921,11 +941,25 @@
 
       // --- Interactive: condition on confounders one at a time, live from raw panel data ---
       const DATA = window.WILDFIRE_DATA;
-      const PANEL = DATA.rows.map((r) => ({
-        ...r,
-        _logFire: Number.isFinite(r.wildfire_area_rai) ? Math.log10(r.wildfire_area_rai + 1) : null,
-        _depRate: r.population ? (r.depression / r.population) * 100000 : null,
-      }));
+      const HEALTH_FIELDS = {
+        depression: "ซึมเศร้า",
+        anxiety: "วิตกกังวล",
+        suicide: "ฆ่าตัวตาย",
+        alcoholism: "ติดสุรา",
+        schizophrenia: "จิตเภท",
+        amphetamine: "แอมเฟตามีน",
+        total_mental_cases: "รวมเคสสุขภาพจิต",
+      };
+      const PANEL = DATA.rows.map((r) => {
+        const row = {
+          ...r,
+          _logFire: Number.isFinite(r.wildfire_area_rai) ? Math.log10(r.wildfire_area_rai + 1) : null,
+        };
+        Object.keys(HEALTH_FIELDS).forEach((f) => {
+          row[`_rate_${f}`] = r.population ? (r[f] / r.population) * 100000 : null;
+        });
+        return row;
+      });
 
       function pearsonRXY(pts) {
         const nn = pts.length;
@@ -989,11 +1023,16 @@
         return { r: pearsonRXY(resid), n: resid.length };
       }
 
-      const RELATIONSHIPS = {
-        fire_pm25: { source: "ไฟป่า", target: "PM2.5", xKey: "_logFire", yKey: "pm25_avg", extraConfounder: "สภาพอากาศ/ความแล้ง*" },
-        fire_dep: { source: "ไฟป่า", target: "ซึมเศร้า", xKey: "_logFire", yKey: "_depRate", extraConfounder: null },
-        pm25_dep: { source: "PM2.5", target: "ซึมเศร้า", xKey: "pm25_avg", yKey: "_depRate", extraConfounder: null },
-      };
+      function getSpec(rel, healthField) {
+        const healthLabel = HEALTH_FIELDS[healthField];
+        if (rel === "fire_pm25") {
+          return { source: "ไฟป่า", target: "PM2.5", xKey: "_logFire", yKey: "pm25_avg", extraConfounder: "สภาพอากาศ/ความแล้ง*" };
+        }
+        if (rel === "fire_health") {
+          return { source: "ไฟป่า", target: healthLabel, xKey: "_logFire", yKey: `_rate_${healthField}`, extraConfounder: null };
+        }
+        return { source: "PM2.5", target: healthLabel, xKey: "pm25_avg", yKey: `_rate_${healthField}`, extraConfounder: null };
+      }
 
       function edgeStyle(r) {
         if (r === null) return { color: "#a39c8c", width: 1.4, dash: true };
@@ -1070,8 +1109,15 @@
       }
 
       let currentRel = "fire_pm25";
+      let currentHealthField = "depression";
       const condRegionEl = document.querySelector("#condRegion");
       const condYearEl = document.querySelector("#condYear");
+      const healthFieldWrap = document.querySelector("#healthFieldWrap");
+      const healthFieldSelect = document.querySelector("#healthFieldSelect");
+      healthFieldSelect.innerHTML = Object.entries(HEALTH_FIELDS)
+        .map(([key, label]) => `<option value="${key}">${label}</option>`)
+        .join("");
+      healthFieldSelect.value = currentHealthField;
 
       function strengthWord(r) {
         if (r === null) return "คำนวณไม่ได้";
@@ -1080,7 +1126,8 @@
       }
 
       function renderInteractive() {
-        const spec = RELATIONSHIPS[currentRel];
+        healthFieldWrap.hidden = currentRel === "fire_pm25";
+        const spec = getSpec(currentRel, currentHealthField);
         const byRegion = condRegionEl.checked;
         const byYear = condYearEl.checked;
         const confounders = [
@@ -1131,6 +1178,10 @@
       });
       condRegionEl.addEventListener("change", renderInteractive);
       condYearEl.addEventListener("change", renderInteractive);
+      healthFieldSelect.addEventListener("change", () => {
+        currentHealthField = healthFieldSelect.value;
+        renderInteractive();
+      });
       renderInteractive();
     </script>
   </body>
