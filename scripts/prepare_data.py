@@ -211,6 +211,16 @@ def main() -> None:
         rec = records.setdefault(key, {"province": row["province"], "year": key[1]})
         rec["province_area_sqkm"] = number(row["area"])
 
+    pop_detail_rows = table(xlsx_sheets(ROOT / "province_area.xlsx")["Sheet1"])
+    for row in pop_detail_rows:
+        key = (row["จังหวัด"], year(row["ปี"]))
+        rec = records.setdefault(key, {"province": row["จังหวัด"], "year": key[1]})
+        rec["population_total"] = number(row["ประชากรรวม (คน)"])
+        rec["population_floating_night"] = number(row["แฝงกลางคืน (คน)"])
+        rec["population_floating_study"] = number(row["แฝงกลางวันเรียน (คน)"])
+        rec["population_floating_work"] = number(row["แฝงกลางวันทำงาน (คน)"])
+        rec["population_density"] = number(row["ความหนาแน่น (คน/ตร.กม.)"])
+
     with (ROOT / "PM25_YEARLY.csv").open(newline="", encoding="utf-8-sig") as f:
         for row in csv.DictReader(f):
             province = en_to_th[norm_en(row["province"])]
@@ -225,6 +235,11 @@ def main() -> None:
         "year",
         "health_region",
         "population",
+        "population_total",
+        "population_floating_night",
+        "population_floating_study",
+        "population_floating_work",
+        "population_density",
         "province_area_sqkm",
         "number_of_wildfire",
         "wildfire_area_rai",

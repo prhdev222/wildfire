@@ -500,6 +500,31 @@
         color: var(--ember);
       }
 
+      .pop-toggle {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        margin-top: 16px;
+        padding: 10px 12px;
+        border: 1px solid var(--ash-line);
+        border-radius: 6px;
+        background: var(--paper-raised);
+        color: var(--ink-soft);
+        font-size: 12px;
+        line-height: 1.4;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .pop-toggle input {
+        flex-shrink: 0;
+        width: 15px;
+        height: 15px;
+        margin-top: 1px;
+        cursor: pointer;
+        accent-color: var(--ink);
+      }
+
       .analysis-link {
         display: block;
         margin-top: 22px;
@@ -609,6 +634,10 @@
             <select id="healthSelect"></select>
           </label>
         </div>
+        <label class="pop-toggle">
+          <input type="checkbox" id="popTotalToggle" />
+          ใช้ประชากรรวม (รวมคนแฝง กลางวัน/คืน) แทนประชากรตามทะเบียน &mdash; มีข้อมูลเฉพาะปี 2018&ndash;2022 (ปีอื่นใช้ทะเบียนเหมือนเดิม)
+        </label>
         <a class="analysis-link" href="./analysis.html">Data Analysis &rarr;</a>
       </aside>
 
@@ -751,10 +780,29 @@
         anxiety: "Anxiety",
         suicide: "Suicide",
         alcoholism: "Alcoholism",
-        schizophrenia: "Schizophrenia",
         amphetamine: "Amphetamine",
+        schizophrenia: "Schizophrenia",
+        dementia: "Dementia",
+        addict_substance: "Substance Addiction",
+        other_phy: "Other Physical",
+        bipolar: "Bipolar",
+        low_iq: "Low IQ",
+        learning_disorder: "Learning Disorder",
+        autistics: "Autism",
+        adhd: "ADHD",
+        game_adult: "Gaming Addiction (Adult)",
+        game_child: "Gaming Addiction (Child)",
+        other_disease: "Other Disease",
+        seizure: "Seizure",
         total_mental_cases: "Total mental cases",
       };
+
+      Object.entries(healthLabels).forEach(([key, label]) => {
+        const alreadyMapped = Object.values(metricDefs).some((d) => d.healthField === key);
+        if (!alreadyMapped) {
+          metricDefs[`${key}_rate`] = { label: `${label} rate`, unit: "/100k", color: "#7a5a8a", healthField: key };
+        }
+      });
 
       const yearSelect = document.querySelector("#yearSelect");
       const metricSelect = document.querySelector("#metricSelect");
@@ -771,11 +819,18 @@
         .join("");
       healthSelect.value = "depression";
 
+      let usePopTotal = false;
+      const popTotalToggle = document.querySelector("#popTotalToggle");
+
       yearSelect.addEventListener("change", render);
       healthSelect.addEventListener("change", render);
       metricSelect.addEventListener("change", () => {
         const field = metricDefs[metricSelect.value].healthField;
         if (field) healthSelect.value = field;
+        render();
+      });
+      popTotalToggle.addEventListener("change", () => {
+        usePopTotal = popTotalToggle.checked;
         render();
       });
 
@@ -817,8 +872,14 @@
         return fmt(value, 1);
       }
 
+      function effectivePopulation(row) {
+        if (usePopTotal && Number.isFinite(row.population_total)) return row.population_total;
+        return row.population;
+      }
+
       function rate(row, field) {
-        return row.population ? (n(row[field]) / row.population) * 100000 : null;
+        const pop = effectivePopulation(row);
+        return pop ? (n(row[field]) / pop) * 100000 : null;
       }
 
       function metricValue(row, metric) {
@@ -828,6 +889,10 @@
 
       function sum(list, field) {
         return list.reduce((acc, row) => acc + n(row[field]), 0);
+      }
+
+      function sumPop(list) {
+        return list.reduce((acc, row) => acc + n(effectivePopulation(row)), 0);
       }
 
       function avg(list, field) {
@@ -872,7 +937,7 @@
       function yearlySeries(healthField) {
         return years.map((year) => {
           const list = rows.filter((row) => row.year === year);
-          const population = sum(list, "population");
+          const population = sumPop(list);
           const healthCases = sum(list, healthField);
           return {
             year,
@@ -1199,7 +1264,7 @@
         const groups = grouped(activeRows.filter((r) => r.health_region), (r) => r.health_region);
         const data = Object.entries(groups)
           .map(([region, list]) => {
-            const population = sum(list, "population");
+            const population = sumPop(list);
             const provinces = [...new Set(list.map((r) => r.province_en).filter(Boolean))].sort();
             return {
               region: `Region ${region}`,
@@ -1233,7 +1298,7 @@
           <table>
             <thead>
               <tr>
-                <th>Province</th><th>Region</th><th>${metricDefs[metric].label}</th><th>PM2.5</th><th>${healthLabels[healthField]} /100k</th><th>Population</th>
+                <th>Province</th><th>Region</th><th>${metricDefs[metric].label}</th><th>PM2.5</th><th>${healthLabels[healthField]} /100k</th><th>Population${usePopTotal ? " (total)" : ""}</th>
               </tr>
             </thead>
             <tbody>
@@ -1245,7 +1310,7 @@
                     <td>${fmt(d.selected_metric, 2)}</td>
                     <td>${fmt(d.pm25_avg, 1)}</td>
                     <td>${fmt(d.selected_health_rate, 1)}</td>
-                    <td>${fmt(d.population)}</td>
+                    <td>${fmt(effectivePopulation(d))}</td>
                   </tr>`
                 )
                 .join("")}
@@ -1349,7 +1414,7 @@
         const groups = grouped(activeRows.filter((r) => r.health_region), (r) => r.health_region);
         const data = Object.entries(groups)
           .map(([region, list]) => {
-            const population = sum(list, "population");
+            const population = sumPop(list);
             return { region, value: population ? (sum(list, healthField) / population) * 100000 : 0 };
           })
           .sort((a, b) => b.value - a.value);
@@ -1387,7 +1452,7 @@
         const metric = metricSelect.value;
         const healthField = healthSelect.value;
         const activeRows = rows.filter((row) => row.year === selectedYear);
-        const population = sum(activeRows, "population");
+        const population = sumPop(activeRows);
         const healthRate = population ? (sum(activeRows, healthField) / population) * 100000 : null;
         const topFire = [...activeRows].sort((a, b) => n(b.wildfire_area_rai) - n(a.wildfire_area_rai))[0];
         const topMetric = [...activeRows].sort((a, b) => n(metricValue(b, metric)) - n(metricValue(a, metric)))[0];
@@ -1402,7 +1467,7 @@
           ["Burned area", `${compact(sum(activeRows, "wildfire_area_rai"))} rai`],
           ["Wildfire events", compact(sum(activeRows, "number_of_wildfire"))],
           ["Average PM2.5", `${fmt(avg(activeRows, "pm25_avg"), 1)} µg/m³`],
-          [`${healthLabels[healthField]} rate`, `${fmt(healthRate, 1)} /100k`],
+          [`${healthLabels[healthField]} rate${usePopTotal ? " (pop. total)" : ""}`, `${fmt(healthRate, 1)} /100k`],
         ]
           .map(([label, value]) => `<div class="kpi"><div class="label">${label}</div><div class="value">${value}</div></div>`)
           .join("");

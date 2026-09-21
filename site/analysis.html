@@ -615,6 +615,29 @@
           <article class="panel wide">
             <div class="panel-head">
               <div>
+                <h2>ประชากรแฝง: อธิบายปริศนา กทม. ได้จริงไหม?</h2>
+                <p class="note">
+                  ทดสอบด้วยข้อมูลจริง &mdash; เทียบ "ประชากรตามทะเบียน" กับ "ประชากรรวม" (รวมคนแฝงกลางวัน/คืน) จาก
+                  <code>province_area.xlsx</code> (มีเฉพาะปี 2018&ndash;2022)
+                </p>
+              </div>
+            </div>
+            <div class="two-col">
+              <div>
+                <div class="group-caption">ช่องว่างประชากรแฝงสูงสุด (ปี 2022)</div>
+                <div id="popGapChart"></div>
+              </div>
+              <div>
+                <div class="group-caption">กทม.: อัตราซึมเศร้าคำนวณ 2 แบบ (2018&ndash;2022)</div>
+                <div id="bkkPopChart"></div>
+              </div>
+            </div>
+            <div id="popGapVerdict" class="dag-verdict" style="margin-top: 14px"></div>
+          </article>
+
+          <article class="panel wide">
+            <div class="panel-head">
+              <div>
                 <h2>ข้อจำกัดของข้อมูล &amp; ขั้นตอนถัดไป</h2>
                 <p class="note">สิ่งที่ต้องระบุคู่กับทุกกราฟก่อนสรุปผล</p>
               </div>
@@ -678,6 +701,13 @@
       function fmt(value, digits = 2) {
         if (!Number.isFinite(value)) return "n/a";
         return value.toLocaleString(undefined, { maximumFractionDigits: digits });
+      }
+
+      function compact(value) {
+        if (!Number.isFinite(value)) return "n/a";
+        if (Math.abs(value) >= 1_000_000) return `${fmt(value / 1_000_000, 1)}M`;
+        if (Math.abs(value) >= 1_000) return `${fmt(value / 1_000, 1)}K`;
+        return fmt(value, 1);
       }
 
       function drawBars(selector, data, valueKey, labelKey, colorFn, valueFmt) {
@@ -946,8 +976,20 @@
         anxiety: "วิตกกังวล",
         suicide: "ฆ่าตัวตาย",
         alcoholism: "ติดสุรา",
-        schizophrenia: "จิตเภท",
         amphetamine: "แอมเฟตามีน",
+        schizophrenia: "จิตเภท",
+        dementia: "สมองเสื่อม",
+        addict_substance: "ติดสารเสพติด",
+        other_phy: "ป่วยทางกายอื่นๆ",
+        bipolar: "ไบโพลาร์",
+        low_iq: "สติปัญญาบกพร่อง",
+        learning_disorder: "บกพร่องการเรียนรู้",
+        autistics: "ออทิสติก",
+        adhd: "สมาธิสั้น",
+        game_adult: "ติดเกม (ผู้ใหญ่)",
+        game_child: "ติดเกม (เด็ก)",
+        other_disease: "โรคอื่นๆ",
+        seizure: "ลมชัก",
         total_mental_cases: "รวมเคสสุขภาพจิต",
       };
       const PANEL = DATA.rows.map((r) => {
@@ -960,6 +1002,67 @@
         });
         return row;
       });
+
+      // --- Floating population: does it explain Bangkok's low reported rate? ---
+      (function renderPopGap() {
+        const snapshotYear = 2022;
+        const snapshotRows = PANEL.filter((r) => r.year === snapshotYear && Number.isFinite(r.population_total));
+        const gapRows = snapshotRows
+          .map((r) => ({ province_en: r.province_en, gap: r.population_total - r.population, isBkk: r.province_en === "Bangkok" }))
+          .sort((a, b) => b.gap - a.gap)
+          .slice(0, 10);
+        drawBars(
+          "#popGapChart",
+          gapRows,
+          "gap",
+          "province_en",
+          (d) => (d.isBkk ? "#c45833" : "#d69a2d"),
+          (d) => `+${compact(d.gap)} คน`
+        );
+
+        const bkkYears = PANEL.filter((r) => r.province_en === "Bangkok" && Number.isFinite(r.population_total)).sort((a, b) => a.year - b.year);
+        const width = 460;
+        const height = 220;
+        const pad = { top: 16, right: 16, bottom: 30, left: 46 };
+        const rateReg = (r) => (r.population ? (r.depression / r.population) * 100000 : null);
+        const rateTotal = (r) => (r.population_total ? (r.depression / r.population_total) * 100000 : null);
+        const maxY = Math.max(...bkkYears.map((r) => rateReg(r)), ...bkkYears.map((r) => rateTotal(r)), 1) * 1.15;
+        const x = (r) => pad.left + ((r.year - bkkYears[0].year) / (bkkYears.at(-1).year - bkkYears[0].year || 1)) * (width - pad.left - pad.right);
+        const y = (v) => height - pad.bottom - (v / maxY) * (height - pad.top - pad.bottom);
+        const linePath = (accessor) =>
+          bkkYears.map((r, i) => `${i ? "L" : "M"}${x(r).toFixed(1)},${y(accessor(r)).toFixed(1)}`).join(" ");
+        document.querySelector("#bkkPopChart").innerHTML = `
+          <svg viewBox="0 0 ${width} ${height}">
+            <line class="axis" x1="${pad.left}" x2="${width - pad.right}" y1="${height - pad.bottom}" y2="${height - pad.bottom}"></line>
+            <line class="axis" x1="${pad.left}" x2="${pad.left}" y1="${pad.top}" y2="${height - pad.bottom}"></line>
+            <path d="${linePath(rateReg)}" fill="none" stroke="#1f6650" stroke-width="2.6"></path>
+            <path d="${linePath(rateTotal)}" fill="none" stroke="#c45833" stroke-width="2.6" stroke-dasharray="5 4"></path>
+            ${bkkYears
+              .map(
+                (r) => `
+                  <circle cx="${x(r)}" cy="${y(rateReg(r))}" r="4" fill="#1f6650"><title>${r.year} (ทะเบียน): ${fmt(rateReg(r), 1)} /100k</title></circle>
+                  <circle cx="${x(r)}" cy="${y(rateTotal(r))}" r="4" fill="#c45833"><title>${r.year} (รวม): ${fmt(rateTotal(r), 1)} /100k</title></circle>
+                  <text class="tick" x="${x(r)}" y="${height - pad.bottom + 16}" text-anchor="middle">${r.year}</text>`
+              )
+              .join("")}
+            <text class="tick" transform="translate(14 ${height / 2}) rotate(-90)" text-anchor="middle">/100k</text>
+          </svg>
+          <p class="note" style="margin-top: 4px">
+            <span style="color:#1f6650">&#9679;</span> เส้นทึบ = คำนวณด้วยประชากรตามทะเบียน &nbsp;
+            <span style="color:#c45833">&#9679;</span> เส้นประ = คำนวณด้วยประชากรรวม (รวมคนแฝง)
+          </p>`;
+
+        const latest = bkkYears.at(-1);
+        const regRate = rateReg(latest);
+        const totRate = rateTotal(latest);
+        const dropPct = regRate ? ((regRate - totRate) / regRate) * 100 : null;
+        const topGapProvince = gapRows[0];
+        document.querySelector("#popGapVerdict").innerHTML = `
+          <p><strong>${topGapProvince.province_en}</strong> มีช่องว่างประชากรแฝงมากที่สุดในประเทศ (+${compact(topGapProvince.gap)} คนที่อยู่จริงแต่ไม่มีทะเบียนบ้านที่นั่น ปี ${snapshotYear})</p>
+          <p>ปี ${latest.year}: อัตราซึมเศร้า กทม. คำนวณด้วยประชากรตามทะเบียน = <strong>${fmt(regRate, 1)} /100k</strong> &rarr; ถ้าใช้ประชากรรวมแทน จะเหลือ <strong>${fmt(totRate, 1)} /100k</strong> (ลดลงอีก ${fmt(dropPct, 0)}%)</p>
+          <p><strong>สรุป: ประชากรแฝงไม่ได้ช่วยอธิบายว่าทำไมอัตรา กทม. ถึงดูต่ำ</strong> &mdash; ตรงข้ามเลย การใช้ประชากรรวม (ตัวหารใหญ่ขึ้น) ยิ่งทำให้อัตรายิ่งต่ำลงไปอีก ไม่ใช่สูงขึ้น
+          เพราะฉะนั้นคำอธิบายที่น่าจะแม่นกว่าคือ "การเข้าถึงบริการ/การวินิจฉัยในระบบรัฐ" ตามที่ตั้งข้อสังเกตไว้ ไม่ใช่เรื่องฐานประชากรที่ใช้คำนวณ</p>`;
+      })();
 
       function pearsonRXY(pts) {
         const nn = pts.length;
