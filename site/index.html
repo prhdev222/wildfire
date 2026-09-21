@@ -255,6 +255,14 @@
         overflow-wrap: anywhere;
       }
 
+      .bar-sub {
+        color: var(--ink-faint);
+        font-size: 11px;
+        line-height: 1.4;
+        margin-top: 2px;
+        overflow-wrap: anywhere;
+      }
+
       .bar-track {
         background: rgba(216, 210, 197, 0.55);
         border-radius: 999px;
@@ -613,7 +621,7 @@
             <div class="panel-head">
               <div>
                 <h2>Health Region Impact</h2>
-                <p class="note">Population-weighted rate per 100,000 people. Hover a bar to see its provinces.</p>
+                <p class="note">Population-weighted rate per 100,000 people.</p>
               </div>
             </div>
             <div id="regionChart"></div>
@@ -875,17 +883,17 @@
           </div>`;
       }
 
-      function drawBars(selector, data, valueKey, labelKey, color, titleFn) {
+      function drawBars(selector, data, valueKey, labelKey, color, subFn) {
         const max = Math.max(...data.map((d) => n(d[valueKey])), 1);
         document.querySelector(selector).innerHTML = `
           <div class="bar-list">
             ${data
               .map((d) => {
                 const width = (n(d[valueKey]) / max) * 100;
-                const title = titleFn ? ` title="${titleFn(d)}"` : "";
+                const sub = subFn ? `<div class="bar-sub">${subFn(d)}</div>` : "";
                 return `
-                  <div class="bar-row"${title}>
-                    <div class="bar-name">${d[labelKey]}</div>
+                  <div class="bar-row">
+                    <div class="bar-name">${d[labelKey]}${sub}</div>
                     <div class="bar-track"><div class="bar-fill" style="width:${width}%; background:${color}"></div></div>
                     <div class="bar-value">${compact(d[valueKey])}</div>
                   </div>`;
@@ -1093,7 +1101,7 @@
             };
           })
           .sort((a, b) => b.value - a.value);
-        drawBars("#regionChart", data, "value", "region", "#1f6650", (d) => `${d.region}: ${d.provinces}`);
+        drawBars("#regionChart", data, "value", "region", "#1f6650", (d) => d.provinces);
       }
 
       function drawCauses() {
