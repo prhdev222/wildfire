@@ -299,6 +299,19 @@
         align-items: center;
       }
 
+      .mini-scatter-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .mini-scatter-title {
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 800;
+        margin-bottom: 6px;
+      }
+
       .thai-map {
         max-height: 620px;
       }
@@ -472,6 +485,10 @@
         .map-wrap {
           grid-template-columns: 1fr;
         }
+
+        .mini-scatter-grid {
+          grid-template-columns: 1fr;
+        }
       }
 
       @media (max-width: 620px) {
@@ -579,11 +596,14 @@
             <div id="rankChart"></div>
           </article>
 
-          <article class="panel">
+          <article class="panel wide">
             <div class="panel-head">
               <div>
-                <h2>Wildfire and PM2.5</h2>
-                <p class="note">Each dot is a province. Dashed line shows the trend.</p>
+                <h2>Three Relationships</h2>
+                <p class="note">
+                  ไฟป่า, PM2.5, และสุขภาพจิต แยกดูทีละคู่ ไฟป่าใช้ log scale เพราะข้อมูลเบ้ขวามาก
+                  (จังหวัดส่วนใหญ่ค่าน้อย มีไม่กี่จังหวัดค่าสูงลิ่ว)
+                </p>
               </div>
             </div>
             <div id="scatterChart"></div>
@@ -593,7 +613,7 @@
             <div class="panel-head">
               <div>
                 <h2>Health Region Impact</h2>
-                <p class="note">Population-weighted rate per 100,000 people.</p>
+                <p class="note">Population-weighted rate per 100,000 people. Hover a bar to see its provinces.</p>
               </div>
             </div>
             <div id="regionChart"></div>
@@ -855,15 +875,16 @@
           </div>`;
       }
 
-      function drawBars(selector, data, valueKey, labelKey, color) {
+      function drawBars(selector, data, valueKey, labelKey, color, titleFn) {
         const max = Math.max(...data.map((d) => n(d[valueKey])), 1);
         document.querySelector(selector).innerHTML = `
           <div class="bar-list">
             ${data
               .map((d) => {
                 const width = (n(d[valueKey]) / max) * 100;
+                const title = titleFn ? ` title="${titleFn(d)}"` : "";
                 return `
-                  <div class="bar-row">
+                  <div class="bar-row"${title}>
                     <div class="bar-name">${d[labelKey]}</div>
                     <div class="bar-track"><div class="bar-fill" style="width:${width}%; background:${color}"></div></div>
                     <div class="bar-value">${compact(d[valueKey])}</div>
@@ -960,48 +981,103 @@
         return { slope, intercept };
       }
 
-      function drawScatter(activeRows, healthField) {
-        const data = activeRows.filter((r) => Number.isFinite(r.wildfire_area_rai) && Number.isFinite(r.pm25_avg));
-        const width = 470;
-        const height = 292;
-        const pad = { top: 16, right: 18, bottom: 42, left: 54 };
-        const maxX = Math.max(...data.map((d) => d.wildfire_area_rai), 1);
-        const maxY = Math.max(...data.map((d) => d.pm25_avg), 1);
-        const x = (value) => pad.left + (value / maxX) * (width - pad.left - pad.right);
-        const y = (value) => height - pad.bottom - (value / maxY) * (height - pad.top - pad.bottom);
-        const xTicks = [0, 0.25, 0.5, 0.75, 1].map((t) => t * maxX);
-        const yTicks = [0, 0.25, 0.5, 0.75, 1].map((t) => t * maxY);
-        const fit = linearFit(data, "wildfire_area_rai", "pm25_avg");
-        document.querySelector("#scatterChart").innerHTML = `
+      function miniScatterSvg(points, spec) {
+        const width = 300;
+        const height = 230;
+        const pad = { top: 12, right: 12, bottom: 34, left: 46 };
+        const xRaw = (d) => d[spec.xKey];
+        const yRaw = (d) => d[spec.yKey];
+        const xVal = (d) => (spec.xLog ? Math.log10(xRaw(d) + 1) : xRaw(d));
+        const data = points.filter((d) => Number.isFinite(xRaw(d)) && Number.isFinite(yRaw(d)));
+        if (!data.length) return `<div class="mini-scatter-title">${spec.title}</div><p class="note">ไม่มีข้อมูล</p>`;
+        const xs = data.map(xVal);
+        const ys = data.map(yRaw);
+        const minX = Math.min(...xs);
+        const maxX = Math.max(...xs, minX + 0.0001);
+        const minY = 0;
+        const maxY = Math.max(...ys, 1);
+        const x = (d) => pad.left + ((xVal(d) - minX) / (maxX - minX)) * (width - pad.left - pad.right);
+        const y = (d) => height - pad.bottom - ((yRaw(d) - minY) / (maxY - minY)) * (height - pad.top - pad.bottom);
+        const xTickLabel = (t) => (spec.xLog ? compact(10 ** t - 1) : compact(t));
+        const xTicks = [0, 0.5, 1].map((f) => minX + f * (maxX - minX));
+        const yTicks = [0, 0.5, 1].map((f) => minY + f * (maxY - minY));
+        const fit = linearFit(
+          data.map((d) => ({ _x: xVal(d), _y: yRaw(d) })),
+          "_x",
+          "_y"
+        );
+        return `
+          <div class="mini-scatter-title">${spec.title}</div>
           <svg viewBox="0 0 ${width} ${height}">
             ${yTicks
               .map(
                 (t) =>
-                  `<line class="grid-line" x1="${pad.left}" x2="${width - pad.right}" y1="${y(t)}" y2="${y(t)}"></line>
-                   <text class="tick" x="${pad.left - 6}" y="${y(t) + 3}" text-anchor="end">${compact(t)}</text>`
+                  `<line class="grid-line" x1="${pad.left}" x2="${width - pad.right}" y1="${y({ [spec.yKey]: t })}" y2="${y({ [spec.yKey]: t })}"></line>
+                   <text class="tick" x="${pad.left - 6}" y="${y({ [spec.yKey]: t }) + 3}" text-anchor="end">${compact(t)}</text>`
               )
               .join("")}
             ${xTicks
               .map(
                 (t) =>
-                  `<text class="tick" x="${x(t)}" y="${height - pad.bottom + 16}" text-anchor="middle">${compact(t)}</text>`
+                  `<text class="tick" x="${pad.left + ((t - minX) / (maxX - minX)) * (width - pad.left - pad.right)}" y="${height - pad.bottom + 16}" text-anchor="middle">${xTickLabel(t)}</text>`
               )
               .join("")}
             <line class="axis" x1="${pad.left}" x2="${width - pad.right}" y1="${height - pad.bottom}" y2="${height - pad.bottom}"></line>
             <line class="axis" x1="${pad.left}" x2="${pad.left}" y1="${pad.top}" y2="${height - pad.bottom}"></line>
             ${fit
-              ? `<line x1="${x(0)}" x2="${x(maxX)}" y1="${y(fit.intercept)}" y2="${y(fit.intercept + fit.slope * maxX)}" stroke="#24231f" stroke-width="1.6" stroke-dasharray="5 4"></line>`
+              ? `<line x1="${pad.left}" x2="${width - pad.right}" y1="${y({ [spec.yKey]: fit.intercept + fit.slope * minX })}" y2="${y({ [spec.yKey]: fit.intercept + fit.slope * maxX })}" stroke="#24231f" stroke-width="1.5" stroke-dasharray="5 4"></line>`
               : ""}
             ${data
-              .map((d) => {
-                const r = rate(d, healthField);
-                return `<circle cx="${x(d.wildfire_area_rai)}" cy="${y(d.pm25_avg)}" r="4.5" fill="rgba(196,88,51,.58)" stroke="#6d2f24"><title>${d.province_en}: ${fmt(d.wildfire_area_rai)} rai, PM2.5 ${fmt(d.pm25_avg, 1)}, ${healthLabels[healthField]} ${fmt(r, 1)} /100k</title></circle>`;
-              })
+              .map(
+                (d) =>
+                  `<circle cx="${x(d)}" cy="${y(d)}" r="3.6" fill="${spec.color}66" stroke="${spec.color}"><title>${d.province_en}: ${spec.tooltip(d)}</title></circle>`
+              )
               .join("")}
-            <text class="tick" x="${width / 2}" y="${height - 6}" text-anchor="middle">wildfire area (rai)</text>
-            <text class="tick" transform="translate(14 ${height / 2}) rotate(-90)" text-anchor="middle">PM2.5 (µg/m³)</text>
-          </svg>
-          <p class="note" style="margin-top: 6px">เส้นประ = แนวโน้มความสัมพันธ์ (linear trend); วางเมาส์บนจุดเพื่อดู${healthLabels[healthField].toLowerCase()}รายจังหวัด</p>`;
+            <text class="tick" x="${width / 2}" y="${height - 6}" text-anchor="middle">${spec.xLabel}</text>
+            <text class="tick" transform="translate(12 ${height / 2}) rotate(-90)" text-anchor="middle">${spec.yLabel}</text>
+          </svg>`;
+      }
+
+      function drawRelationships(activeRows, healthField) {
+        const rows = activeRows.map((r) => ({ ...r, _health: rate(r, healthField) }));
+        const healthLabel = healthLabels[healthField];
+        const specs = [
+          {
+            title: `ไฟป่า ↔ PM2.5`,
+            xKey: "wildfire_area_rai",
+            yKey: "pm25_avg",
+            xLog: true,
+            xLabel: "wildfire area (rai, log)",
+            yLabel: "PM2.5 (µg/m³)",
+            color: "#c45833",
+            tooltip: (d) => `${fmt(d.wildfire_area_rai)} rai, PM2.5 ${fmt(d.pm25_avg, 1)}`,
+          },
+          {
+            title: `PM2.5 ↔ ${healthLabel}`,
+            xKey: "pm25_avg",
+            yKey: "_health",
+            xLog: false,
+            xLabel: "PM2.5 (µg/m³)",
+            yLabel: `${healthLabel} /100k`,
+            color: "#297a8c",
+            tooltip: (d) => `PM2.5 ${fmt(d.pm25_avg, 1)}, ${healthLabel} ${fmt(d._health, 1)} /100k`,
+          },
+          {
+            title: `ไฟป่า ↔ ${healthLabel}`,
+            xKey: "wildfire_area_rai",
+            yKey: "_health",
+            xLog: true,
+            xLabel: "wildfire area (rai, log)",
+            yLabel: `${healthLabel} /100k`,
+            color: "#1f6650",
+            tooltip: (d) => `${fmt(d.wildfire_area_rai)} rai, ${healthLabel} ${fmt(d._health, 1)} /100k`,
+          },
+        ];
+        document.querySelector("#scatterChart").innerHTML = `
+          <div class="mini-scatter-grid">
+            ${specs.map((spec) => `<div>${miniScatterSvg(rows, spec)}</div>`).join("")}
+          </div>
+          <p class="note" style="margin-top: 10px">เส้นประ = แนวโน้มความสัมพันธ์ (linear trend); วางเมาส์บนจุดเพื่อดูค่ารายจังหวัด</p>`;
       }
 
       function drawRegion(activeRows, healthField) {
@@ -1009,13 +1085,15 @@
         const data = Object.entries(groups)
           .map(([region, list]) => {
             const population = sum(list, "population");
+            const provinces = [...new Set(list.map((r) => r.province_en).filter(Boolean))].sort();
             return {
               region: `Region ${region}`,
               value: population ? (sum(list, healthField) / population) * 100000 : 0,
+              provinces: provinces.join(", "),
             };
           })
           .sort((a, b) => b.value - a.value);
-        drawBars("#regionChart", data, "value", "region", "#1f6650");
+        drawBars("#regionChart", data, "value", "region", "#1f6650", (d) => `${d.region}: ${d.provinces}`);
       }
 
       function drawCauses() {
@@ -1117,7 +1195,7 @@
           "province_en",
           metricDefs[metric].color
         );
-        drawScatter(activeRows, healthField);
+        drawRelationships(activeRows, healthField);
         drawRegion(activeRows, healthField);
         drawCauses();
         renderTable(activeRows, metric, healthField);
