@@ -321,6 +321,29 @@
         margin-bottom: 6px;
       }
 
+      .region-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 10px;
+        margin-top: 12px;
+      }
+
+      .region-legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+        color: var(--ink-soft);
+      }
+
+      .region-dot {
+        display: inline-block;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
       .thai-map {
         max-height: 620px;
       }
@@ -1373,6 +1396,12 @@
         if (box) box.innerHTML = html;
       }
 
+      function regionColor(region, alpha) {
+        const idx = (Number(region) - 1 + 13) % 13;
+        const hue = Math.round((360 / 13) * idx);
+        return alpha !== undefined ? `hsla(${hue}, 60%, 42%, ${alpha})` : `hsl(${hue}, 60%, 42%)`;
+      }
+
       function miniScatterSvg(points, spec) {
         const width = 300;
         const height = 230;
@@ -1420,10 +1449,12 @@
               ? `<line x1="${pad.left}" x2="${width - pad.right}" y1="${y({ [spec.yKey]: fit.intercept + fit.slope * minX })}" y2="${y({ [spec.yKey]: fit.intercept + fit.slope * maxX })}" stroke="#24231f" stroke-width="1.5" stroke-dasharray="5 4"></line>`
               : ""}
             ${data
-              .map(
-                (d) =>
-                  `<circle cx="${x(d)}" cy="${y(d)}" r="3.6" fill="${spec.color}66" stroke="${spec.color}"><title>${d.province_en}: ${spec.tooltip(d)}</title></circle>`
-              )
+              .map((d) => {
+                const fill = spec.colorByRegion && d.health_region ? regionColor(d.health_region, 0.6) : `${spec.color}66`;
+                const stroke = spec.colorByRegion && d.health_region ? regionColor(d.health_region, 1) : spec.color;
+                const regionLabel = d.health_region ? `เขต ${d.health_region} &mdash; ` : "";
+                return `<circle cx="${x(d)}" cy="${y(d)}" r="3.6" fill="${fill}" stroke="${stroke}"><title>${regionLabel}${d.province_en}: ${spec.tooltip(d)}</title></circle>`;
+              })
               .join("")}
             <text class="tick" x="${width / 2}" y="${height - 6}" text-anchor="middle">${spec.xLabel}</text>
             <text class="tick" transform="translate(12 ${height / 2}) rotate(-90)" text-anchor="middle">${spec.yLabel}</text>
@@ -1442,6 +1473,7 @@
             xLabel: "wildfire area (rai, log)",
             yLabel: "PM2.5 (µg/m³)",
             color: "#c45833",
+            colorByRegion: true,
             tooltip: (d) => `${fmt(d.wildfire_area_rai)} rai, PM2.5 ${fmt(d.pm25_avg, 1)}`,
           },
           {
@@ -1452,6 +1484,7 @@
             xLabel: "PM2.5 (µg/m³)",
             yLabel: `${healthLabel} /100k`,
             color: "#297a8c",
+            colorByRegion: true,
             tooltip: (d) => `PM2.5 ${fmt(d.pm25_avg, 1)}, ${healthLabel} ${fmt(d._health, 1)} /100k`,
           },
           {
@@ -1462,14 +1495,21 @@
             xLabel: "wildfire area (rai, log)",
             yLabel: `${healthLabel} /100k`,
             color: "#1f6650",
+            colorByRegion: true,
             tooltip: (d) => `${fmt(d.wildfire_area_rai)} rai, ${healthLabel} ${fmt(d._health, 1)} /100k`,
           },
         ];
+        const legendRegions = [...new Set(rows.map((r) => r.health_region).filter(Boolean))].sort((a, b) => Number(a) - Number(b));
         document.querySelector("#scatterChart").innerHTML = `
           <div class="mini-scatter-grid">
             ${specs.map((spec) => `<div>${miniScatterSvg(rows, spec)}</div>`).join("")}
           </div>
-          <p class="note" style="margin-top: 10px">เส้นประ = แนวโน้มความสัมพันธ์ (linear trend); วางเมาส์บนจุดเพื่อดูค่ารายจังหวัด</p>`;
+          <div class="region-legend">
+            ${legendRegions
+              .map((r) => `<span class="region-legend-item"><span class="region-dot" style="background:${regionColor(r)}"></span>เขต ${r}</span>`)
+              .join("")}
+          </div>
+          <p class="note" style="margin-top: 6px">สีของจุด = เขตสุขภาพ &middot; เส้นประ = แนวโน้มความสัมพันธ์ (linear trend); วางเมาส์บนจุดเพื่อดูค่ารายจังหวัด</p>`;
       }
 
       function drawRegion(activeRows, healthField) {
