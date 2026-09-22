@@ -784,8 +784,11 @@
             <div class="panel-head">
               <div>
                 <h2>Mental Health Trends <span class="pop-badge" title="เปลี่ยนตามตัวเลือกประชากร">&#128101;</span></h2>
-                <p class="note">% เปลี่ยนแปลงของอัตราแต่ละโรค ทั้งประเทศ (2015&ndash;2023)</p>
+                <p class="note" id="healthYearNote">% เปลี่ยนแปลงของอัตราแต่ละโรค ทั้งประเทศ (2015&ndash;2023)</p>
               </div>
+              <label class="cause-toggle-group" style="align-items: center; gap: 6px">
+                <select id="healthYearRegionSelect" class="cause-toggle-btn" style="font-weight: 700"></select>
+              </label>
               <button class="explain-btn" data-target="healthYearExplain">ดูคำอธิบาย</button>
             </div>
             <div id="healthYearChart"></div>
@@ -802,6 +805,18 @@
             </div>
             <div id="pm25RegionChart"></div>
             <div id="pm25RegionExplain" class="explain-box" hidden></div>
+          </article>
+
+          <article class="panel wide">
+            <div class="panel-head">
+              <div>
+                <h2>Regional Overview <span class="pop-badge" title="เปลี่ยนตามตัวเลือกประชากร">&#128101;</span></h2>
+                <p class="note" id="overviewNote"></p>
+              </div>
+              <button class="explain-btn" data-target="overviewExplain">ดูคำอธิบาย</button>
+            </div>
+            <div id="overviewTable"></div>
+            <div id="overviewExplain" class="explain-box" hidden></div>
           </article>
 
           <article class="panel wide">
@@ -893,6 +908,12 @@
         .join("");
       healthSelect.value = "depression";
 
+      const healthRegions = [...new Set(rows.map((r) => r.health_region).filter(Boolean))].sort((a, b) => Number(a) - Number(b));
+      const healthYearRegionSelect = document.querySelector("#healthYearRegionSelect");
+      healthYearRegionSelect.innerHTML =
+        `<option value="all">ทั้งประเทศ</option>` + healthRegions.map((r) => `<option value="${r}">เขต ${r}</option>`).join("");
+      let healthYearRegion = "all";
+
       let usePopTotal = false;
       const popTotalToggle = document.querySelector("#popTotalToggle");
 
@@ -915,6 +936,11 @@
           causeYearMode = btn.dataset.mode;
           render();
         });
+      });
+
+      healthYearRegionSelect.addEventListener("change", () => {
+        healthYearRegion = healthYearRegionSelect.value;
+        render();
       });
 
       document.querySelectorAll(".explain-btn").forEach((btn) => {
@@ -1568,11 +1594,12 @@
         `;
       }
 
-      function healthYearTrendData() {
+      function healthYearTrendData(region) {
         const firstYear = years[0];
         const lastYear = years.at(-1);
-        const firstRows = rows.filter((r) => r.year === firstYear);
-        const lastRows = rows.filter((r) => r.year === lastYear);
+        const scoped = region && region !== "all" ? rows.filter((r) => r.health_region === region) : rows;
+        const firstRows = scoped.filter((r) => r.year === firstYear);
+        const lastRows = scoped.filter((r) => r.year === lastYear);
         const firstPop = sumPop(firstRows);
         const lastPop = sumPop(lastRows);
         return Object.entries(healthLabels)
@@ -1586,8 +1613,10 @@
           .filter((d) => d.pct !== null && Number.isFinite(d.pct));
       }
 
-      function drawHealthYearTrend() {
-        const trend = [...healthYearTrendData()].sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct));
+      function drawHealthYearTrend(region) {
+        document.querySelector("#healthYearNote").textContent =
+          region && region !== "all" ? `% เปลี่ยนแปลงของอัตราแต่ละโรค เขต ${region} (2015–2023)` : "% เปลี่ยนแปลงของอัตราแต่ละโรค ทั้งประเทศ (2015–2023)";
+        const trend = [...healthYearTrendData(region)].sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct));
         drawBars(
           "#healthYearChart",
           trend.map((d) => ({ ...d, absPct: Math.abs(d.pct) })),
@@ -1599,14 +1628,15 @@
         );
       }
 
-      function explainHealthYearTrend() {
-        const trend = healthYearTrendData();
+      function explainHealthYearTrend(region) {
+        const trend = healthYearTrendData(region);
         if (!trend.length) return `<p>ไม่มีข้อมูล</p>`;
         const riser = [...trend].sort((a, b) => b.pct - a.pct)[0];
         const faller = [...trend].sort((a, b) => a.pct - b.pct)[0];
         const { firstYear, lastYear } = trend[0];
+        const scopeLabel = region && region !== "all" ? `เขต ${region}` : "ทั้งประเทศ";
         return `
-          <p>เทียบอัตราต่อประชากรแสนคนทั้งประเทศ ระหว่างปี <strong>${firstYear}</strong> กับ <strong>${lastYear}</strong> (18 กลุ่มโรค ไม่รวมยอดรวม)</p>
+          <p>เทียบอัตราต่อประชากรแสนคน<strong>${scopeLabel}</strong> ระหว่างปี <strong>${firstYear}</strong> กับ <strong>${lastYear}</strong> (18 กลุ่มโรค ไม่รวมยอดรวม)</p>
           <p><strong>เพิ่มขึ้นเร็วที่สุด:</strong> ${riser.label} (${fmt(riser.firstRate, 1)}&rarr;${fmt(riser.lastRate, 1)} /100k, ${riser.pct > 0 ? "+" : ""}${fmt(riser.pct, 0)}%)</p>
           <p><strong>ลดลงเร็วที่สุด:</strong> ${faller.label} (${fmt(faller.firstRate, 1)}&rarr;${fmt(faller.lastRate, 1)} /100k, ${fmt(faller.pct, 0)}%)</p>
           <p class="note">ตัวเลขที่เพิ่มขึ้นบางส่วนอาจสะท้อนการวินิจฉัย/บันทึกข้อมูลที่ดีขึ้นตามเวลา ไม่ใช่ความชุกที่เพิ่มขึ้นจริงเสมอไป (ดูข้อจำกัดในหน้า Data Analysis)</p>`;
@@ -1648,6 +1678,76 @@
           <p><strong>${top.region}</strong> มี PM2.5 เฉลี่ยสูงสุด (${fmt(top.value, 1)} µg/m&sup3;) สูงกว่าเขตต่ำสุด <strong>${bottom.region}</strong> (${fmt(bottom.value, 1)} µg/m&sup3;) อยู่ ${ratio ? fmt(ratio, 1) + " เท่า" : "n/a"}</p>
           ${topTrendNote}
           <p class="note">ค่านี้เป็นค่าเฉลี่ยธรรมดาของจังหวัดในเขต (ไม่ถ่วงน้ำหนักด้วยประชากร) ต่างจาก Health Region Impact ที่ถ่วงน้ำหนักด้วยประชากร</p>`;
+      }
+
+      function regionalOverviewData(activeRows, healthField) {
+        const groups = grouped(activeRows.filter((r) => r.health_region), (r) => r.health_region);
+        const base = Object.entries(groups).map(([region, list]) => {
+          const wildfireArea = sum(list, "wildfire_area_rai");
+          const pm25 = avg(list, "pm25_avg");
+          const population = sumPop(list);
+          const healthRate = population ? (sum(list, healthField) / population) * 100000 : null;
+          return { region, wildfireArea, pm25, healthRate };
+        });
+        const rankBy = (key) => {
+          const rankMap = {};
+          [...base]
+            .filter((d) => Number.isFinite(d[key]))
+            .sort((a, b) => b[key] - a[key])
+            .forEach((d, i) => (rankMap[d.region] = i + 1));
+          return rankMap;
+        };
+        const fireRank = rankBy("wildfireArea");
+        const pmRank = rankBy("pm25");
+        const healthRank = rankBy("healthRate");
+        return base
+          .map((d) => {
+            const ranks = [fireRank[d.region], pmRank[d.region], healthRank[d.region]].filter(Number.isFinite);
+            const avgRank = ranks.length ? ranks.reduce((a, b) => a + b, 0) / ranks.length : null;
+            return { ...d, fireRank: fireRank[d.region] ?? null, pmRank: pmRank[d.region] ?? null, healthRank: healthRank[d.region] ?? null, avgRank };
+          })
+          .sort((a, b) => (a.avgRank ?? 99) - (b.avgRank ?? 99));
+      }
+
+      function drawRegionalOverview(activeRows, healthField, selectedYear) {
+        const data = regionalOverviewData(activeRows, healthField);
+        const healthLabel = healthLabels[healthField];
+        document.querySelector("#overviewNote").textContent = `Combined rank across wildfire area, PM2.5, and ${healthLabel} rate, ${selectedYear}. Rank 1 = highest (worst).`;
+        document.querySelector("#overviewTable").innerHTML = `
+          <table>
+            <thead>
+              <tr><th>Region</th><th>Wildfire area</th><th>PM2.5</th><th>${healthLabel}</th><th>Avg rank</th></tr>
+            </thead>
+            <tbody>
+              ${data
+                .map(
+                  (d) => `<tr>
+                    <td>Region ${d.region}</td>
+                    <td>${compact(d.wildfireArea)} (#${d.fireRank ?? "n/a"})</td>
+                    <td>${fmt(d.pm25, 1)} (#${d.pmRank ?? "n/a"})</td>
+                    <td>${fmt(d.healthRate, 1)} (#${d.healthRank ?? "n/a"})</td>
+                    <td><strong>${d.avgRank !== null ? fmt(d.avgRank, 1) : "n/a"}</strong></td>
+                  </tr>`
+                )
+                .join("")}
+            </tbody>
+          </table>`;
+      }
+
+      function explainRegionalOverview(activeRows, healthField, selectedYear) {
+        const data = regionalOverviewData(activeRows, healthField);
+        if (!data.length) return `<p>ไม่มีข้อมูล</p>`;
+        const worst = data[0];
+        const healthLabel = healthLabels[healthField];
+        const allTop = worst.fireRank === 1 && worst.pmRank === 1 && worst.healthRank === 1;
+        return `
+          <p><strong>เขต ${worst.region}</strong> มีอันดับเฉลี่ยแย่ที่สุดเมื่อรวม 3 มิติ (rank เฉลี่ย ${fmt(worst.avgRank, 1)}) ในปี ${selectedYear}: พื้นที่ไฟป่าอันดับ #${worst.fireRank}, PM2.5 อันดับ #${worst.pmRank}, ${healthLabel} อันดับ #${worst.healthRank}</p>
+          ${
+            allTop
+              ? `<p>เขตนี้ครองอันดับ 1 ทั้ง 3 มิติพร้อมกัน &mdash; เป็นเขตที่น่าเป็นห่วงที่สุดในภาพรวมของปีนี้</p>`
+              : `<p>ไม่มีเขตไหนครองอันดับ 1 ครบทั้ง 3 มิติพร้อมกัน แสดงว่าปัจจัยเสี่ยง (ไฟป่า, PM2.5, สุขภาพจิต) กระจายตัวไม่เท่ากันในแต่ละเขต ไม่ได้กระจุกอยู่ที่เขตเดียว</p>`
+          }
+          <p class="note">อันดับ 1 = ค่าสูงสุด (แย่ที่สุด) ในมิตินั้น &mdash; rank เฉลี่ยคือค่าเฉลี่ยของอันดับทั้ง 3 มิติ ยิ่งน้อยยิ่งแย่ในภาพรวม ตารางนี้แสดงความสัมพันธ์เชิงพื้นที่เท่านั้น ไม่ได้พิสูจน์ causal (ดูหน้า Data Analysis)</p>`;
       }
 
       function render() {
@@ -1697,10 +1797,12 @@
         setExplain("regionExplain", explainRegion(activeRows, healthField));
         drawCauses(selectedYear);
         setExplain("causeExplain", explainCauses(selectedYear));
-        drawHealthYearTrend();
-        setExplain("healthYearExplain", explainHealthYearTrend());
+        drawHealthYearTrend(healthYearRegion);
+        setExplain("healthYearExplain", explainHealthYearTrend(healthYearRegion));
         drawPm25Region(activeRows, selectedYear);
         setExplain("pm25RegionExplain", explainPm25Region(activeRows, selectedYear));
+        drawRegionalOverview(activeRows, healthField, selectedYear);
+        setExplain("overviewExplain", explainRegionalOverview(activeRows, healthField, selectedYear));
         renderTable(activeRows, metric, healthField);
         renderPrepRecord();
       }
