@@ -503,6 +503,30 @@
         border-color: var(--ink);
       }
 
+      .mini-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        flex-shrink: 0;
+      }
+
+      .mini-select {
+        border: 1px solid var(--ash-line);
+        background: var(--control);
+        color: var(--ink-soft);
+        font: inherit;
+        font-size: 11px;
+        font-weight: 700;
+        border-radius: 6px;
+        padding: 6px 8px;
+        cursor: pointer;
+        max-width: 150px;
+      }
+
+      .mini-select:hover {
+        border-color: var(--ash-line-strong);
+      }
+
       .explain-box {
         background: rgba(239, 234, 223, 0.6);
         border: 1px solid var(--ash-line);
@@ -706,6 +730,10 @@
                 <h2>National Trend <span class="pop-badge" title="เปลี่ยนตามตัวเลือกประชากร">&#128101;</span></h2>
                 <p class="note">เส้นนี้เป็นภาพรวมทั้งประเทศตามปี และจะไฮไลต์ปีที่เลือกจาก dropdown.</p>
               </div>
+              <div class="mini-controls">
+                <select class="mini-select mini-year-select"></select>
+                <select class="mini-select mini-health-select"></select>
+              </div>
               <button class="explain-btn" data-target="trendExplain">ดูคำอธิบาย</button>
             </div>
             <div id="trendChart"></div>
@@ -717,6 +745,10 @@
               <div>
                 <h2>Thailand Province Map <span class="pop-badge" title="เปลี่ยนตามตัวเลือกประชากรเมื่อเลือกตัวชี้วัดสุขภาพจิต">&#128101;</span></h2>
                 <p class="note">สีเข้มหมายถึงค่าของตัวชี้วัดที่เลือกสูงกว่าในปีนั้น.</p>
+              </div>
+              <div class="mini-controls">
+                <select class="mini-select mini-year-select"></select>
+                <select class="mini-select mini-metric-select"></select>
               </div>
               <button class="explain-btn" data-target="mapExplain">ดูคำอธิบาย</button>
             </div>
@@ -730,6 +762,10 @@
               <div>
                 <h2>Top Provinces <span class="pop-badge" title="เปลี่ยนตามตัวเลือกประชากรเมื่อเลือกตัวชี้วัดสุขภาพจิต">&#128101;</span></h2>
                 <p class="note" id="rankNote"></p>
+              </div>
+              <div class="mini-controls">
+                <select class="mini-select mini-year-select"></select>
+                <select class="mini-select mini-metric-select"></select>
               </div>
               <button class="explain-btn" data-target="rankExplain">ดูคำอธิบาย</button>
             </div>
@@ -746,6 +782,10 @@
                   (จังหวัดส่วนใหญ่ค่าน้อย มีไม่กี่จังหวัดค่าสูงลิ่ว)
                 </p>
               </div>
+              <div class="mini-controls">
+                <select class="mini-select mini-year-select"></select>
+                <select class="mini-select mini-health-select"></select>
+              </div>
               <button class="explain-btn" data-target="relExplain">ดูคำอธิบาย</button>
             </div>
             <div id="scatterChart"></div>
@@ -757,6 +797,10 @@
               <div>
                 <h2>Health Region Impact <span class="pop-badge" title="เปลี่ยนตามตัวเลือกประชากร">&#128101;</span></h2>
                 <p class="note">Population-weighted rate per 100,000 people.</p>
+              </div>
+              <div class="mini-controls">
+                <select class="mini-select mini-year-select"></select>
+                <select class="mini-select mini-health-select"></select>
               </div>
               <button class="explain-btn" data-target="regionExplain">ดูคำอธิบาย</button>
             </div>
@@ -773,6 +817,9 @@
               <div class="cause-toggle-group" id="causeYearToggle">
                 <button class="cause-toggle-btn active" data-mode="all">ทุกปีรวมกัน</button>
                 <button class="cause-toggle-btn" data-mode="selected">เฉพาะปีที่เลือก</button>
+              </div>
+              <div class="mini-controls">
+                <select class="mini-select mini-year-select"></select>
               </div>
               <button class="explain-btn" data-target="causeExplain">ดูคำอธิบาย</button>
             </div>
@@ -798,8 +845,15 @@
           <article class="panel">
             <div class="panel-head">
               <div>
-                <h2>PM2.5 by Health Region</h2>
+                <h2>PM2.5 by Health Region <span class="pop-badge" title="เปลี่ยนตามตัวเลือกประชากร">&#128101;</span></h2>
                 <p class="note" id="pm25RegionNote"></p>
+              </div>
+              <div class="cause-toggle-group" id="pm25WeightToggle">
+                <button class="cause-toggle-btn active" data-weighted="true">ถ่วงน้ำหนักประชากร</button>
+                <button class="cause-toggle-btn" data-weighted="false">ค่าเฉลี่ยธรรมดา</button>
+              </div>
+              <div class="mini-controls">
+                <select class="mini-select mini-year-select"></select>
               </div>
               <button class="explain-btn" data-target="pm25RegionExplain">ดูคำอธิบาย</button>
             </div>
@@ -813,6 +867,10 @@
                 <h2>Regional Overview <span class="pop-badge" title="เปลี่ยนตามตัวเลือกประชากร">&#128101;</span></h2>
                 <p class="note" id="overviewNote"></p>
               </div>
+              <div class="mini-controls">
+                <select class="mini-select mini-year-select"></select>
+                <select class="mini-select mini-health-select"></select>
+              </div>
               <button class="explain-btn" data-target="overviewExplain">ดูคำอธิบาย</button>
             </div>
             <div id="overviewTable"></div>
@@ -824,6 +882,11 @@
               <div>
                 <h2>Data Table <span class="pop-badge" title="เปลี่ยนตามตัวเลือกประชากร">&#128101;</span></h2>
                 <p class="note" id="tableNote"></p>
+              </div>
+              <div class="mini-controls">
+                <select class="mini-select mini-year-select"></select>
+                <select class="mini-select mini-metric-select"></select>
+                <select class="mini-select mini-health-select"></select>
               </div>
             </div>
             <div id="tableWrap"></div>
@@ -917,23 +980,61 @@
       let usePopTotal = false;
       const popTotalToggle = document.querySelector("#popTotalToggle");
 
-      yearSelect.addEventListener("change", render);
-      healthSelect.addEventListener("change", render);
-      metricSelect.addEventListener("change", () => {
-        const field = metricDefs[metricSelect.value].healthField;
+      function onYearChange(value) {
+        yearSelect.value = value;
+        render();
+      }
+
+      function onMetricChange(value) {
+        metricSelect.value = value;
+        const field = metricDefs[value].healthField;
         if (field) healthSelect.value = field;
         render();
-      });
+      }
+
+      function onHealthChange(value) {
+        healthSelect.value = value;
+        render();
+      }
+
+      yearSelect.addEventListener("change", () => onYearChange(yearSelect.value));
+      healthSelect.addEventListener("change", () => onHealthChange(healthSelect.value));
+      metricSelect.addEventListener("change", () => onMetricChange(metricSelect.value));
       popTotalToggle.addEventListener("change", () => {
         usePopTotal = popTotalToggle.checked;
         render();
       });
 
-      document.querySelectorAll(".cause-toggle-btn").forEach((btn) => {
+      const miniYearSelects = document.querySelectorAll(".mini-year-select");
+      const miniMetricSelects = document.querySelectorAll(".mini-metric-select");
+      const miniHealthSelects = document.querySelectorAll(".mini-health-select");
+      miniYearSelects.forEach((el) => {
+        el.innerHTML = yearSelect.innerHTML;
+        el.addEventListener("change", () => onYearChange(el.value));
+      });
+      miniMetricSelects.forEach((el) => {
+        el.innerHTML = metricSelect.innerHTML;
+        el.addEventListener("change", () => onMetricChange(el.value));
+      });
+      miniHealthSelects.forEach((el) => {
+        el.innerHTML = healthSelect.innerHTML;
+        el.addEventListener("change", () => onHealthChange(el.value));
+      });
+
+      document.querySelectorAll("#causeYearToggle .cause-toggle-btn").forEach((btn) => {
         btn.addEventListener("click", () => {
-          document.querySelectorAll(".cause-toggle-btn").forEach((b) => b.classList.remove("active"));
+          document.querySelectorAll("#causeYearToggle .cause-toggle-btn").forEach((b) => b.classList.remove("active"));
           btn.classList.add("active");
           causeYearMode = btn.dataset.mode;
+          render();
+        });
+      });
+
+      document.querySelectorAll("#pm25WeightToggle .cause-toggle-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll("#pm25WeightToggle .cause-toggle-btn").forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          pm25RegionWeighted = btn.dataset.weighted === "true";
           render();
         });
       });
@@ -1642,22 +1743,34 @@
           <p class="note">ตัวเลขที่เพิ่มขึ้นบางส่วนอาจสะท้อนการวินิจฉัย/บันทึกข้อมูลที่ดีขึ้นตามเวลา ไม่ใช่ความชุกที่เพิ่มขึ้นจริงเสมอไป (ดูข้อจำกัดในหน้า Data Analysis)</p>`;
       }
 
-      function pm25RegionData(activeRows) {
+      let pm25RegionWeighted = true;
+
+      function pm25RegionData(activeRows, weighted) {
         const groups = grouped(activeRows.filter((r) => r.health_region && Number.isFinite(r.pm25_avg)), (r) => r.health_region);
         return Object.entries(groups)
-          .map(([region, list]) => ({ region: `Region ${region}`, value: avg(list, "pm25_avg"), provinces: [...new Set(list.map((r) => r.province_en))].sort().join(", ") }))
+          .map(([region, list]) => {
+            let value;
+            if (weighted) {
+              const totalPop = sumPop(list.filter((r) => Number.isFinite(effectivePopulation(r))));
+              const weightedSum = list.reduce((a, r) => a + r.pm25_avg * n(effectivePopulation(r)), 0);
+              value = totalPop ? weightedSum / totalPop : null;
+            } else {
+              value = avg(list, "pm25_avg");
+            }
+            return { region: `Region ${region}`, value, provinces: [...new Set(list.map((r) => r.province_en))].sort().join(", ") };
+          })
           .filter((d) => Number.isFinite(d.value))
           .sort((a, b) => b.value - a.value);
       }
 
       function drawPm25Region(activeRows, selectedYear) {
-        document.querySelector("#pm25RegionNote").textContent = `Simple average PM2.5 by health region, ${selectedYear}.`;
-        const data = pm25RegionData(activeRows);
+        document.querySelector("#pm25RegionNote").textContent = `${pm25RegionWeighted ? "Population-weighted" : "Simple"} average PM2.5 by health region, ${selectedYear}.`;
+        const data = pm25RegionData(activeRows, pm25RegionWeighted);
         drawBars("#pm25RegionChart", data, "value", "region", "#297a8c", (d) => d.provinces);
       }
 
       function explainPm25Region(activeRows, selectedYear) {
-        const data = pm25RegionData(activeRows);
+        const data = pm25RegionData(activeRows, pm25RegionWeighted);
         if (!data.length) return `<p>ไม่มีข้อมูล PM2.5 สำหรับปีนี้</p>`;
         const top = data[0];
         const bottom = data.at(-1);
@@ -1665,8 +1778,8 @@
 
         const firstYear = years[0];
         const lastYear = years.at(-1);
-        const firstRows = pm25RegionData(rows.filter((r) => r.year === firstYear));
-        const lastRows = pm25RegionData(rows.filter((r) => r.year === lastYear));
+        const firstRows = pm25RegionData(rows.filter((r) => r.year === firstYear), pm25RegionWeighted);
+        const lastRows = pm25RegionData(rows.filter((r) => r.year === lastYear), pm25RegionWeighted);
         const topFirst = firstRows.find((d) => d.region === top.region);
         const topLast = lastRows.find((d) => d.region === top.region);
         const topTrendNote =
@@ -1677,7 +1790,11 @@
         return `
           <p><strong>${top.region}</strong> มี PM2.5 เฉลี่ยสูงสุด (${fmt(top.value, 1)} µg/m&sup3;) สูงกว่าเขตต่ำสุด <strong>${bottom.region}</strong> (${fmt(bottom.value, 1)} µg/m&sup3;) อยู่ ${ratio ? fmt(ratio, 1) + " เท่า" : "n/a"}</p>
           ${topTrendNote}
-          <p class="note">ค่านี้เป็นค่าเฉลี่ยธรรมดาของจังหวัดในเขต (ไม่ถ่วงน้ำหนักด้วยประชากร) ต่างจาก Health Region Impact ที่ถ่วงน้ำหนักด้วยประชากร</p>`;
+          <p class="note">${
+            pm25RegionWeighted
+              ? "ค่านี้ถ่วงน้ำหนักด้วยประชากร (สะท้อน PM2.5 ที่คนส่วนใหญ่ในเขตสัมผัสจริง) สอดคล้องกับวิธีคำนวณของ Health Region Impact"
+              : "ค่านี้เป็นค่าเฉลี่ยธรรมดาของจังหวัดในเขต (ไม่ถ่วงน้ำหนักด้วยประชากร) — จังหวัดเล็กกับใหญ่มีน้ำหนักเท่ากัน"
+          }</p>`;
       }
 
       function regionalOverviewData(activeRows, healthField) {
@@ -1754,6 +1871,9 @@
         const selectedYear = Number(yearSelect.value);
         const metric = metricSelect.value;
         const healthField = healthSelect.value;
+        miniYearSelects.forEach((el) => (el.value = yearSelect.value));
+        miniMetricSelects.forEach((el) => (el.value = metricSelect.value));
+        miniHealthSelects.forEach((el) => (el.value = healthSelect.value));
         const activeRows = rows.filter((row) => row.year === selectedYear);
         const population = sumPop(activeRows);
         const healthRate = population ? (sum(activeRows, healthField) / population) * 100000 : null;
