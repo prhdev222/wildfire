@@ -808,6 +808,7 @@
               <div class="mini-controls">
                 <select class="mini-select mini-year-select"></select>
                 <select class="mini-select mini-health-select"></select>
+                <select class="mini-select" id="scatterRegionSelect"></select>
               </div>
               <button class="explain-btn" data-target="relExplain">ดูคำอธิบาย</button>
             </div>
@@ -999,6 +1000,14 @@
       healthYearRegionSelect.innerHTML =
         `<option value="all">ทั้งประเทศ</option>` + healthRegions.map((r) => `<option value="${r}">เขต ${r}</option>`).join("");
       let healthYearRegion = "all";
+
+      const scatterRegionSelect = document.querySelector("#scatterRegionSelect");
+      scatterRegionSelect.innerHTML =
+        `<option value="all">ทุกเขต</option>` + healthRegions.map((r) => `<option value="${r}">เฉพาะเขต ${r}</option>`).join("");
+      scatterRegionSelect.addEventListener("change", () => {
+        scatterRegion = scatterRegionSelect.value;
+        render();
+      });
 
       let usePopTotal = false;
       const popTotalToggle = document.querySelector("#popTotalToggle");
@@ -1461,9 +1470,13 @@
           </svg>`;
       }
 
+      let scatterRegion = "all";
+
       function drawRelationships(activeRows, healthField) {
-        const rows = activeRows.map((r) => ({ ...r, _health: rate(r, healthField) }));
+        const scoped = scatterRegion === "all" ? activeRows : activeRows.filter((r) => r.health_region === scatterRegion);
+        const rows = scoped.map((r) => ({ ...r, _health: rate(r, healthField) }));
         const healthLabel = healthLabels[healthField];
+        const pointColor = scatterRegion === "all" ? null : regionColor(scatterRegion);
         const specs = [
           {
             title: `ไฟป่า ↔ PM2.5`,
@@ -1472,8 +1485,7 @@
             xLog: true,
             xLabel: "wildfire area (rai, log)",
             yLabel: "PM2.5 (µg/m³)",
-            color: "#c45833",
-            colorByRegion: true,
+            color: pointColor || "#c45833",
             tooltip: (d) => `${fmt(d.wildfire_area_rai)} rai, PM2.5 ${fmt(d.pm25_avg, 1)}`,
           },
           {
@@ -1483,8 +1495,7 @@
             xLog: false,
             xLabel: "PM2.5 (µg/m³)",
             yLabel: `${healthLabel} /100k`,
-            color: "#297a8c",
-            colorByRegion: true,
+            color: pointColor || "#297a8c",
             tooltip: (d) => `PM2.5 ${fmt(d.pm25_avg, 1)}, ${healthLabel} ${fmt(d._health, 1)} /100k`,
           },
           {
@@ -1494,22 +1505,16 @@
             xLog: true,
             xLabel: "wildfire area (rai, log)",
             yLabel: `${healthLabel} /100k`,
-            color: "#1f6650",
-            colorByRegion: true,
+            color: pointColor || "#1f6650",
             tooltip: (d) => `${fmt(d.wildfire_area_rai)} rai, ${healthLabel} ${fmt(d._health, 1)} /100k`,
           },
         ];
-        const legendRegions = [...new Set(rows.map((r) => r.health_region).filter(Boolean))].sort((a, b) => Number(a) - Number(b));
+        const scopeLabel = scatterRegion === "all" ? "ทุกจังหวัด" : `เฉพาะเขต ${scatterRegion}`;
         document.querySelector("#scatterChart").innerHTML = `
           <div class="mini-scatter-grid">
             ${specs.map((spec) => `<div>${miniScatterSvg(rows, spec)}</div>`).join("")}
           </div>
-          <div class="region-legend">
-            ${legendRegions
-              .map((r) => `<span class="region-legend-item"><span class="region-dot" style="background:${regionColor(r)}"></span>เขต ${r}</span>`)
-              .join("")}
-          </div>
-          <p class="note" style="margin-top: 6px">สีของจุด = เขตสุขภาพ &middot; เส้นประ = แนวโน้มความสัมพันธ์ (linear trend); วางเมาส์บนจุดเพื่อดูค่ารายจังหวัด</p>`;
+          <p class="note" style="margin-top: 10px">แสดง${scopeLabel} &middot; เส้นประ = แนวโน้มความสัมพันธ์ (linear trend); วางเมาส์บนจุดเพื่อดูค่ารายจังหวัด</p>`;
       }
 
       function drawRegion(activeRows, healthField) {
