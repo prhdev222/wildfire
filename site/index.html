@@ -1420,6 +1420,7 @@
         const xVal = (d) => (spec.xLog ? Math.log10(xRaw(d) + 1) : xRaw(d));
         const data = points.filter((d) => Number.isFinite(xRaw(d)) && Number.isFinite(yRaw(d)));
         if (!data.length) return `<div class="mini-scatter-title">${spec.title}</div><p class="note">ไม่มีข้อมูล</p>`;
+        const highlightMissing = spec.highlightRegion && spec.highlightRegion !== "all" && !data.some((d) => d.health_region === spec.highlightRegion);
         const xs = data.map(xVal);
         const ys = data.map(yRaw);
         const minX = Math.min(...xs);
@@ -1474,7 +1475,8 @@
             })()}
             <text class="tick" x="${width / 2}" y="${height - 6}" text-anchor="middle">${spec.xLabel}</text>
             <text class="tick" transform="translate(12 ${height / 2}) rotate(-90)" text-anchor="middle">${spec.yLabel}</text>
-          </svg>`;
+          </svg>
+          ${highlightMissing ? `<p class="note" style="color: var(--ember)">เขต ${spec.highlightRegion} ไม่มีข้อมูล${spec.xKey.includes("wildfire") ? "พื้นที่ไฟป่า" : spec.yKey.includes("wildfire") ? "พื้นที่ไฟป่า" : "ตัวแปรนี้"} จึงไม่ปรากฏจุดในกราฟนี้</p>` : ""}`;
       }
 
       let scatterRegion = "all";
