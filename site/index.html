@@ -200,6 +200,7 @@
 
       .panel-head {
         display: flex;
+        flex-wrap: wrap;
         align-items: start;
         justify-content: space-between;
         gap: 12px;
@@ -473,6 +474,35 @@
         border-color: var(--ink);
       }
 
+      .cause-toggle-group {
+        display: flex;
+        gap: 6px;
+        flex-shrink: 0;
+      }
+
+      .cause-toggle-btn {
+        border: 1px solid var(--ash-line);
+        background: var(--control);
+        color: var(--ink-soft);
+        font: inherit;
+        font-size: 11px;
+        font-weight: 700;
+        border-radius: 6px;
+        padding: 6px 10px;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+
+      .cause-toggle-btn:hover:not(.active) {
+        border-color: var(--ash-line-strong);
+      }
+
+      .cause-toggle-btn.active {
+        background: var(--ink);
+        color: var(--paper);
+        border-color: var(--ink);
+      }
+
       .explain-box {
         background: rgba(239, 234, 223, 0.6);
         border: 1px solid var(--ash-line);
@@ -523,6 +553,21 @@
         margin-top: 1px;
         cursor: pointer;
         accent-color: var(--ink);
+      }
+
+      .pop-toggle-legend {
+        margin-top: 8px;
+        color: var(--ink-faint);
+        font-size: 11px;
+        line-height: 1.4;
+      }
+
+      .pop-badge {
+        display: inline-block;
+        font-size: 12px;
+        vertical-align: middle;
+        opacity: 0.7;
+        cursor: help;
       }
 
       .analysis-link {
@@ -638,6 +683,7 @@
           <input type="checkbox" id="popTotalToggle" />
           ใช้ประชากรรวม (รวมคนแฝง กลางวัน/คืน) แทนประชากรตามทะเบียน &mdash; มีข้อมูลเฉพาะปี 2018&ndash;2022 (ปีอื่นใช้ทะเบียนเหมือนเดิม)
         </label>
+        <p class="pop-toggle-legend">&#128101; = กราฟนี้เปลี่ยนตามตัวเลือกประชากรด้านบน (มีผลทั้งจอมือถือและจอคอมพิวเตอร์)</p>
         <a class="analysis-link" href="./analysis.html">Data Analysis &rarr;</a>
       </aside>
 
@@ -657,7 +703,7 @@
           <article class="panel wide">
             <div class="panel-head">
               <div>
-                <h2>National Trend</h2>
+                <h2>National Trend <span class="pop-badge" title="เปลี่ยนตามตัวเลือกประชากร">&#128101;</span></h2>
                 <p class="note">เส้นนี้เป็นภาพรวมทั้งประเทศตามปี และจะไฮไลต์ปีที่เลือกจาก dropdown.</p>
               </div>
               <button class="explain-btn" data-target="trendExplain">ดูคำอธิบาย</button>
@@ -669,7 +715,7 @@
           <article class="panel wide">
             <div class="panel-head">
               <div>
-                <h2>Thailand Province Map</h2>
+                <h2>Thailand Province Map <span class="pop-badge" title="เปลี่ยนตามตัวเลือกประชากรเมื่อเลือกตัวชี้วัดสุขภาพจิต">&#128101;</span></h2>
                 <p class="note">สีเข้มหมายถึงค่าของตัวชี้วัดที่เลือกสูงกว่าในปีนั้น.</p>
               </div>
               <button class="explain-btn" data-target="mapExplain">ดูคำอธิบาย</button>
@@ -682,7 +728,7 @@
           <article class="panel">
             <div class="panel-head">
               <div>
-                <h2>Top Provinces</h2>
+                <h2>Top Provinces <span class="pop-badge" title="เปลี่ยนตามตัวเลือกประชากรเมื่อเลือกตัวชี้วัดสุขภาพจิต">&#128101;</span></h2>
                 <p class="note" id="rankNote"></p>
               </div>
               <button class="explain-btn" data-target="rankExplain">ดูคำอธิบาย</button>
@@ -694,7 +740,7 @@
           <article class="panel wide">
             <div class="panel-head">
               <div>
-                <h2>Three Relationships</h2>
+                <h2>Three Relationships <span class="pop-badge" title="เปลี่ยนตามตัวเลือกประชากร">&#128101;</span></h2>
                 <p class="note">
                   ไฟป่า, PM2.5, และสุขภาพจิต แยกดูทีละคู่ ไฟป่าใช้ log scale เพราะข้อมูลเบ้ขวามาก
                   (จังหวัดส่วนใหญ่ค่าน้อย มีไม่กี่จังหวัดค่าสูงลิ่ว)
@@ -709,7 +755,7 @@
           <article class="panel">
             <div class="panel-head">
               <div>
-                <h2>Health Region Impact</h2>
+                <h2>Health Region Impact <span class="pop-badge" title="เปลี่ยนตามตัวเลือกประชากร">&#128101;</span></h2>
                 <p class="note">Population-weighted rate per 100,000 people.</p>
               </div>
               <button class="explain-btn" data-target="regionExplain">ดูคำอธิบาย</button>
@@ -722,7 +768,11 @@
             <div class="panel-head">
               <div>
                 <h2>Wildfire Causes</h2>
-                <p class="note">National cause categories in long format from the source workbook.</p>
+                <p class="note" id="causeNote">National cause categories in long format from the source workbook.</p>
+              </div>
+              <div class="cause-toggle-group" id="causeYearToggle">
+                <button class="cause-toggle-btn active" data-mode="all">ทุกปีรวมกัน</button>
+                <button class="cause-toggle-btn" data-mode="selected">เฉพาะปีที่เลือก</button>
               </div>
               <button class="explain-btn" data-target="causeExplain">ดูคำอธิบาย</button>
             </div>
@@ -730,10 +780,34 @@
             <div id="causeExplain" class="explain-box" hidden></div>
           </article>
 
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Mental Health Trends <span class="pop-badge" title="เปลี่ยนตามตัวเลือกประชากร">&#128101;</span></h2>
+                <p class="note">% เปลี่ยนแปลงของอัตราแต่ละโรค ทั้งประเทศ (2015&ndash;2023)</p>
+              </div>
+              <button class="explain-btn" data-target="healthYearExplain">ดูคำอธิบาย</button>
+            </div>
+            <div id="healthYearChart"></div>
+            <div id="healthYearExplain" class="explain-box" hidden></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>PM2.5 by Health Region</h2>
+                <p class="note" id="pm25RegionNote"></p>
+              </div>
+              <button class="explain-btn" data-target="pm25RegionExplain">ดูคำอธิบาย</button>
+            </div>
+            <div id="pm25RegionChart"></div>
+            <div id="pm25RegionExplain" class="explain-box" hidden></div>
+          </article>
+
           <article class="panel wide">
             <div class="panel-head">
               <div>
-                <h2>Data Table</h2>
+                <h2>Data Table <span class="pop-badge" title="เปลี่ยนตามตัวเลือกประชากร">&#128101;</span></h2>
                 <p class="note" id="tableNote"></p>
               </div>
             </div>
@@ -832,6 +906,15 @@
       popTotalToggle.addEventListener("change", () => {
         usePopTotal = popTotalToggle.checked;
         render();
+      });
+
+      document.querySelectorAll(".cause-toggle-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll(".cause-toggle-btn").forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          causeYearMode = btn.dataset.mode;
+          render();
+        });
       });
 
       document.querySelectorAll(".explain-btn").forEach((btn) => {
@@ -1023,7 +1106,7 @@
           </div>`;
       }
 
-      function drawBars(selector, data, valueKey, labelKey, color, subFn) {
+      function drawBars(selector, data, valueKey, labelKey, color, subFn, valueFmt) {
         const max = Math.max(...data.map((d) => n(d[valueKey])), 1);
         document.querySelector(selector).innerHTML = `
           <div class="bar-list">
@@ -1031,11 +1114,13 @@
               .map((d) => {
                 const width = (n(d[valueKey]) / max) * 100;
                 const sub = subFn ? `<div class="bar-sub">${subFn(d)}</div>` : "";
+                const fillColor = typeof color === "function" ? color(d) : color;
+                const value = valueFmt ? valueFmt(d) : compact(d[valueKey]);
                 return `
                   <div class="bar-row">
                     <div class="bar-name">${d[labelKey]}${sub}</div>
-                    <div class="bar-track"><div class="bar-fill" style="width:${width}%; background:${color}"></div></div>
-                    <div class="bar-value">${compact(d[valueKey])}</div>
+                    <div class="bar-track"><div class="bar-fill" style="width:${width}%; background:${fillColor}"></div></div>
+                    <div class="bar-value">${value}</div>
                   </div>`;
               })
               .join("")}
@@ -1276,8 +1361,15 @@
         drawBars("#regionChart", data, "value", "region", "#1f6650", (d) => d.provinces);
       }
 
-      function drawCauses() {
-        const byCause = Object.entries(grouped(causes, (d) => d.cause))
+      let causeYearMode = "all";
+
+      function drawCauses(selectedYear) {
+        const filtered = causeYearMode === "selected" ? causes.filter((c) => c.year === selectedYear) : causes;
+        document.querySelector("#causeNote").textContent =
+          causeYearMode === "selected"
+            ? `Cause categories for ${selectedYear} only.`
+            : "National cause categories in long format from the source workbook.";
+        const byCause = Object.entries(grouped(filtered, (d) => d.cause))
           .map(([cause, list]) => ({ cause, area_rai: sum(list, "area_rai") }))
           .sort((a, b) => b.area_rai - a.area_rai)
           .slice(0, 10);
@@ -1433,7 +1525,7 @@
           ${bkkNote}`;
       }
 
-      function explainCauses() {
+      function explainCauses(selectedYear) {
         const byCause = Object.entries(grouped(causes, (d) => d.cause))
           .map(([cause, list]) => ({ cause, area_rai: sum(list, "area_rai") }))
           .sort((a, b) => b.area_rai - a.area_rai);
@@ -1442,9 +1534,120 @@
         const top = byCause[0];
         const topShare = total ? (top.area_rai / total) * 100 : null;
         const slashIdx = byCause.findIndex((c) => /slash/i.test(c.cause));
+
+        const causeYears = [...new Set(causes.map((c) => c.year))].sort((a, b) => a - b);
+        const firstYear = causeYears[0];
+        const lastYear = causeYears.at(-1);
+        const trend = Object.entries(grouped(causes, (d) => d.cause))
+          .map(([cause, list]) => {
+            const first = list.find((d) => d.year === firstYear)?.area_rai ?? 0;
+            const last = list.find((d) => d.year === lastYear)?.area_rai ?? 0;
+            const pct = first ? ((last - first) / first) * 100 : last ? Infinity : null;
+            return { cause, first, last, pct };
+          })
+          .filter((d) => d.pct !== null && Number.isFinite(d.pct));
+        const riser = [...trend].sort((a, b) => b.pct - a.pct)[0];
+        const faller = [...trend].sort((a, b) => a.pct - b.pct)[0];
+
+        const selectedYearNote = (() => {
+          if (!Number.isFinite(selectedYear)) return "";
+          const yearCauses = causes
+            .filter((c) => c.year === selectedYear)
+            .sort((a, b) => b.area_rai - a.area_rai);
+          if (!yearCauses.length) return "";
+          const yearTop = yearCauses[0];
+          const sameAsOverall = yearTop.cause === top.cause;
+          return `<p>ปี <strong>${selectedYear}</strong>: สาเหตุอันดับ 1 คือ <strong>${yearTop.cause}</strong> (${fmt(yearTop.area_rai, 1)} ล้านไร่) ${sameAsOverall ? "ตรงกับอันดับ 1 ของภาพรวมทั้งหมด" : `ต่างจากอันดับ 1 ของภาพรวม (${top.cause})`}</p>`;
+        })();
+
         return `
           <p><strong>${top.cause}</strong> เป็นสาเหตุอันดับ 1 คิดเป็น ${topShare !== null ? fmt(topShare, 0) + "%" : "n/a"} ของพื้นที่เผาไหม้สะสมทั้งหมด (รวมทุกปีในข้อมูล)</p>
-          ${slashIdx >= 0 ? `<p>"${byCause[slashIdx].cause}" ที่มักถูกเข้าใจว่าเป็นสาเหตุหลักในสื่อ จริงๆ แล้วอยู่อันดับ ${slashIdx + 1} จาก ${byCause.length} สาเหตุในข้อมูลชุดนี้</p>` : ""}`;
+          ${slashIdx >= 0 ? `<p>"${byCause[slashIdx].cause}" ที่มักถูกเข้าใจว่าเป็นสาเหตุหลักในสื่อ จริงๆ แล้วอยู่อันดับ ${slashIdx + 1} จาก ${byCause.length} สาเหตุในข้อมูลชุดนี้</p>` : ""}
+          ${selectedYearNote}
+          ${riser && faller ? `<p><strong>แนวโน้ม ${firstYear}&rarr;${lastYear}:</strong> "${riser.cause}" เพิ่มขึ้นเร็วที่สุด (${fmt(riser.first, 1)}&rarr;${fmt(riser.last, 1)} ล้านไร่, ${riser.pct > 0 ? "+" : ""}${fmt(riser.pct, 0)}%) ส่วน "${faller.cause}" ลดลงเร็วที่สุด (${fmt(faller.first, 1)}&rarr;${fmt(faller.last, 1)} ล้านไร่, ${fmt(faller.pct, 0)}%)</p>` : ""}
+        `;
+      }
+
+      function healthYearTrendData() {
+        const firstYear = years[0];
+        const lastYear = years.at(-1);
+        const firstRows = rows.filter((r) => r.year === firstYear);
+        const lastRows = rows.filter((r) => r.year === lastYear);
+        const firstPop = sumPop(firstRows);
+        const lastPop = sumPop(lastRows);
+        return Object.entries(healthLabels)
+          .filter(([field]) => field !== "total_mental_cases")
+          .map(([field, label]) => {
+            const firstRate = firstPop ? (sum(firstRows, field) / firstPop) * 100000 : null;
+            const lastRate = lastPop ? (sum(lastRows, field) / lastPop) * 100000 : null;
+            const pct = firstRate ? ((lastRate - firstRate) / firstRate) * 100 : lastRate ? Infinity : null;
+            return { field, label, firstRate, lastRate, pct, firstYear, lastYear };
+          })
+          .filter((d) => d.pct !== null && Number.isFinite(d.pct));
+      }
+
+      function drawHealthYearTrend() {
+        const trend = [...healthYearTrendData()].sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct));
+        drawBars(
+          "#healthYearChart",
+          trend.map((d) => ({ ...d, absPct: Math.abs(d.pct) })),
+          "absPct",
+          "label",
+          (d) => (d.pct >= 0 ? "#c45833" : "#1f6650"),
+          null,
+          (d) => `${d.pct > 0 ? "+" : ""}${fmt(d.pct, 0)}%`
+        );
+      }
+
+      function explainHealthYearTrend() {
+        const trend = healthYearTrendData();
+        if (!trend.length) return `<p>ไม่มีข้อมูล</p>`;
+        const riser = [...trend].sort((a, b) => b.pct - a.pct)[0];
+        const faller = [...trend].sort((a, b) => a.pct - b.pct)[0];
+        const { firstYear, lastYear } = trend[0];
+        return `
+          <p>เทียบอัตราต่อประชากรแสนคนทั้งประเทศ ระหว่างปี <strong>${firstYear}</strong> กับ <strong>${lastYear}</strong> (18 กลุ่มโรค ไม่รวมยอดรวม)</p>
+          <p><strong>เพิ่มขึ้นเร็วที่สุด:</strong> ${riser.label} (${fmt(riser.firstRate, 1)}&rarr;${fmt(riser.lastRate, 1)} /100k, ${riser.pct > 0 ? "+" : ""}${fmt(riser.pct, 0)}%)</p>
+          <p><strong>ลดลงเร็วที่สุด:</strong> ${faller.label} (${fmt(faller.firstRate, 1)}&rarr;${fmt(faller.lastRate, 1)} /100k, ${fmt(faller.pct, 0)}%)</p>
+          <p class="note">ตัวเลขที่เพิ่มขึ้นบางส่วนอาจสะท้อนการวินิจฉัย/บันทึกข้อมูลที่ดีขึ้นตามเวลา ไม่ใช่ความชุกที่เพิ่มขึ้นจริงเสมอไป (ดูข้อจำกัดในหน้า Data Analysis)</p>`;
+      }
+
+      function pm25RegionData(activeRows) {
+        const groups = grouped(activeRows.filter((r) => r.health_region && Number.isFinite(r.pm25_avg)), (r) => r.health_region);
+        return Object.entries(groups)
+          .map(([region, list]) => ({ region: `Region ${region}`, value: avg(list, "pm25_avg"), provinces: [...new Set(list.map((r) => r.province_en))].sort().join(", ") }))
+          .filter((d) => Number.isFinite(d.value))
+          .sort((a, b) => b.value - a.value);
+      }
+
+      function drawPm25Region(activeRows, selectedYear) {
+        document.querySelector("#pm25RegionNote").textContent = `Simple average PM2.5 by health region, ${selectedYear}.`;
+        const data = pm25RegionData(activeRows);
+        drawBars("#pm25RegionChart", data, "value", "region", "#297a8c", (d) => d.provinces);
+      }
+
+      function explainPm25Region(activeRows, selectedYear) {
+        const data = pm25RegionData(activeRows);
+        if (!data.length) return `<p>ไม่มีข้อมูล PM2.5 สำหรับปีนี้</p>`;
+        const top = data[0];
+        const bottom = data.at(-1);
+        const ratio = bottom.value ? top.value / bottom.value : null;
+
+        const firstYear = years[0];
+        const lastYear = years.at(-1);
+        const firstRows = pm25RegionData(rows.filter((r) => r.year === firstYear));
+        const lastRows = pm25RegionData(rows.filter((r) => r.year === lastYear));
+        const topFirst = firstRows.find((d) => d.region === top.region);
+        const topLast = lastRows.find((d) => d.region === top.region);
+        const topTrendNote =
+          topFirst && topLast
+            ? `<p><strong>${top.region}</strong> (เขตที่ PM2.5 สูงสุดในปี ${selectedYear}) เปลี่ยนจาก ${fmt(topFirst.value, 1)} µg/m&sup3; ในปี ${firstYear} เป็น ${fmt(topLast.value, 1)} µg/m&sup3; ในปี ${lastYear}</p>`
+            : "";
+
+        return `
+          <p><strong>${top.region}</strong> มี PM2.5 เฉลี่ยสูงสุด (${fmt(top.value, 1)} µg/m&sup3;) สูงกว่าเขตต่ำสุด <strong>${bottom.region}</strong> (${fmt(bottom.value, 1)} µg/m&sup3;) อยู่ ${ratio ? fmt(ratio, 1) + " เท่า" : "n/a"}</p>
+          ${topTrendNote}
+          <p class="note">ค่านี้เป็นค่าเฉลี่ยธรรมดาของจังหวัดในเขต (ไม่ถ่วงน้ำหนักด้วยประชากร) ต่างจาก Health Region Impact ที่ถ่วงน้ำหนักด้วยประชากร</p>`;
       }
 
       function render() {
@@ -1492,8 +1695,12 @@
         setExplain("relExplain", explainRelationships(activeRows, healthField));
         drawRegion(activeRows, healthField);
         setExplain("regionExplain", explainRegion(activeRows, healthField));
-        drawCauses();
-        setExplain("causeExplain", explainCauses());
+        drawCauses(selectedYear);
+        setExplain("causeExplain", explainCauses(selectedYear));
+        drawHealthYearTrend();
+        setExplain("healthYearExplain", explainHealthYearTrend());
+        drawPm25Region(activeRows, selectedYear);
+        setExplain("pm25RegionExplain", explainPm25Region(activeRows, selectedYear));
         renderTable(activeRows, metric, healthField);
         renderPrepRecord();
       }
