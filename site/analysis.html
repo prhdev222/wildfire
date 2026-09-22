@@ -419,6 +419,42 @@
         gap: 20px;
       }
 
+      .source-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .source-card {
+        border: 1px solid var(--ash-line);
+        border-radius: 8px;
+        padding: 12px 14px;
+        background: var(--paper);
+      }
+
+      .source-card h3 {
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .source-card .source-file {
+        color: var(--ink-faint);
+        font-size: 11px;
+        margin-top: 2px;
+      }
+
+      .source-card p {
+        color: var(--ink-soft);
+        font-size: 12.5px;
+        line-height: 1.55;
+        margin-top: 8px;
+      }
+
+      .source-card strong {
+        color: var(--ink);
+      }
+
       .two-col ul {
         margin: 0;
         padding-left: 18px;
@@ -496,7 +532,8 @@
         }
 
         .grid,
-        .two-col {
+        .two-col,
+        .source-grid {
           grid-template-columns: 1fr;
         }
       }
@@ -557,6 +594,55 @@
         </div>
 
         <section class="grid">
+          <article class="panel wide">
+            <div class="panel-head">
+              <div>
+                <h2>ภาพรวมข้อมูลต้นทาง: 6 ตาราง</h2>
+                <p class="note">
+                  วิเคราะห์แต่ละตารางแยกกันก่อน แล้วค่อยเอามารวมหาความสัมพันธ์ร่วมกันในหัวข้อถัดๆ ไปของหน้านี้
+                </p>
+              </div>
+            </div>
+            <div class="source-grid">
+              <div class="source-card">
+                <h3>1. ไฟป่า</h3>
+                <div class="source-file">Fire_area_prep_province.xlsx</div>
+                <p>585 จาก 693 แถว (77 จังหวัด &times; ปีที่มีข้อมูลจริง) มีจำนวนครั้งและพื้นที่เผาไหม้ (ไร่) ต่อจังหวัด-ปี</p>
+                <p>รวมพื้นที่เผาไหม้สะสมทั้งหมด <strong>969,006 ไร่</strong> ตลอดช่วงข้อมูล &mdash; แถวที่ไฟไหม้มากสุดคือ <strong>เชียงใหม่ ปี 2020</strong> (53,720 ไร่)</p>
+              </div>
+              <div class="source-card">
+                <h3>2. PM2.5</h3>
+                <div class="source-file">PM25_YEARLY.csv</div>
+                <p>539 แถว ครอบคลุมเฉพาะปี <strong>2016&ndash;2022</strong> (ไม่มีปี 2015 และ 2023) เป็นค่าเฉลี่ยรายวันต่อปีต่อจังหวัด</p>
+                <p>ค่าเฉลี่ยรวมทั้งชุดข้อมูล <strong>32.9 &micro;g/m&sup3;</strong> &mdash; สูงกว่าเกณฑ์ WHO (5 &micro;g/m&sup3;) หลายเท่าตัว</p>
+              </div>
+              <div class="source-card">
+                <h3>3. เคสสุขภาพจิต</h3>
+                <div class="source-file">Psychi_cases.xlsx</div>
+                <p>ครบ 693 แถว (ทุกจังหวัดทุกปี) มี 18 หมวดโรค/พฤติกรรม + ประชากรตามทะเบียนต่อแถว</p>
+                <p>รวมเคสสะสมทั้งหมด <strong>18,273,464 เคส</strong> ตลอด 9 ปี &mdash; หมวดที่มีเคสสะสมมากที่สุดคือ <strong>วิตกกังวล</strong> (2,966,629 เคส) ไม่ใช่ซึมเศร้าอย่างที่มักเข้าใจกัน</p>
+              </div>
+              <div class="source-card">
+                <h3>4. เขตสุขภาพ</h3>
+                <div class="source-file">health_region.xlsx</div>
+                <p>ครบ 693 แถว ใช้แบ่งจังหวัดเป็น <strong>13 เขตสุขภาพ</strong> พร้อมจำนวนประชากรตามทะเบียนต่อจังหวัด-ปี</p>
+                <p>ประชากรจังหวัดต่ำสุด-สูงสุด: <strong>175,121 &ndash; 5,648,978 คน</strong> (กทม. สูงสุด) &mdash; ตารางนี้คือคีย์เชื่อมทุกตารางอื่นเข้าด้วยกัน</p>
+              </div>
+              <div class="source-card">
+                <h3>5. พื้นที่ &amp; ประชากรแฝง</h3>
+                <div class="source-file">province_area.xlsx</div>
+                <p>385 จาก 693 แถว มีเฉพาะปี <strong>2018&ndash;2022</strong> มีพื้นที่ (ตร.กม.) และประชากรรวม (รวมคนแฝงกลางวัน/คืน)</p>
+                <p>ประชากรแฝงเฉลี่ย <strong>~120,237 คน</strong> ต่อจังหวัด-ปี (คนที่อยู่จริงแต่ไม่มีทะเบียนบ้านในจังหวัดนั้น) &mdash; กทม. มีช่องว่างนี้สูงสุดในประเทศ</p>
+              </div>
+              <div class="source-card">
+                <h3>6. สาเหตุไฟป่า</h3>
+                <div class="source-file">wildfire_causes.xlsx</div>
+                <p>90 แถว = 10 สาเหตุ &times; 9 ปี (2015&ndash;2023) แต่เป็น<strong>ระดับประเทศเท่านั้น ไม่มีคอลัมน์จังหวัด/เขต</strong></p>
+                <p>เชื่อมกับอีก 5 ตารางด้วยคีย์ "ปี" ได้ (ระดับประเทศ) แต่เชื่อมระดับจังหวัด/เขตไม่ได้เลย &mdash; เป็นข้อจำกัดของข้อมูลต้นทาง ไม่ใช่ของการวิเคราะห์</p>
+              </div>
+            </div>
+          </article>
+
           <article class="panel wide">
             <div class="panel-head">
               <div>
