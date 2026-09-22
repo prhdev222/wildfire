@@ -597,6 +597,42 @@
           <article class="panel wide">
             <div class="panel-head">
               <div>
+                <h2>แนวทางการวิเคราะห์ (Methodology)</h2>
+                <p class="note">ภาพรวม 3 ขั้นตอนที่ใช้ในโปรเจกต์นี้ ตั้งแต่เตรียมข้อมูลจนถึง dashboard</p>
+              </div>
+            </div>
+            <div class="group-caption">1. การรวมและเตรียมข้อมูล (Data Integration &amp; Cleaning)</div>
+            <p style="color: var(--ink-soft); font-size: 13px; line-height: 1.6">
+              <strong>เชื่อมโยงข้อมูล (Data Joining):</strong> ใช้ตัวแปรอ้างอิงร่วมกัน ได้แก่ <strong>ชื่อจังหวัด (Province)</strong>
+              และ <strong>ปี (Year)</strong> ในการรวม 5 จาก 6 ชุดข้อมูลต้นทาง (ไฟป่า, PM2.5, เคสสุขภาพจิต, เขตสุขภาพ, พื้นที่/ประชากร)
+              ให้อยู่ในตารางเดียวกัน (<code>clean_province_year.csv</code>) สำหรับวิเคราะห์ระดับจังหวัด-ปี
+            </p>
+            <p style="color: var(--ink-soft); font-size: 13px; line-height: 1.6; margin-top: 6px">
+              <strong>ข้อยกเว้น:</strong> ตาราง "สาเหตุไฟป่า" (<code>wildfire_causes.xlsx</code>) เชื่อมได้ด้วย <strong>ปี</strong> เท่านั้น
+              เพราะเป็นข้อมูลระดับประเทศ ไม่มีคอลัมน์จังหวัด (รายละเอียดในตารางที่ 6 ด้านล่าง)
+            </p>
+
+            <div class="group-caption" style="margin-top: 18px">2. การวิเคราะห์เชิงสถิติ (Statistical Analysis)</div>
+            <p style="color: var(--ink-soft); font-size: 13px; line-height: 1.6">
+              <strong>การวิเคราะห์สหสัมพันธ์ (Correlation Analysis):</strong> คำนวณค่าสัมประสิทธิ์สหสัมพันธ์ (Pearson r,
+              Spearman &rho;) เพื่อประเมินทิศทางและความแรงของความสัมพันธ์ระหว่างพื้นที่ไฟป่า, PM2.5, และอัตราผู้ป่วยจิตเวช
+              ทั้งแบบดิบและแบบคุมตัวแปรกวน (fixed-effects ระดับจังหวัด+ปี)
+            </p>
+            <p style="color: var(--ink-soft); font-size: 13px; line-height: 1.6; margin-top: 6px">
+              <strong>Choropleth Map:</strong> ใช้แผนที่ระบายสี (ในหน้า Dashboard) เปรียบเทียบการกระจายตัวเชิงพื้นที่
+              ว่ากลุ่มจังหวัดที่มีไฟป่า/PM2.5 หนาแน่น เป็นพื้นที่เดียวกับที่มีอัตราผู้ป่วยจิตเวชสูงหรือไม่
+            </p>
+
+            <div class="group-caption" style="margin-top: 18px">3. การทำ Interactive Dashboard</div>
+            <p style="color: var(--ink-soft); font-size: 13px; line-height: 1.6">
+              นำผลวิเคราะห์ไปสร้าง Dashboard พร้อมเครื่องมือ interactive ให้สำรวจข้อมูลได้เอง เช่น เลือกปี/เขต/โรค,
+              สลับตัวชี้วัด, และคุมตัวแปรกวนได้แบบ real-time (ดูตัวอย่างในเครื่องมือ "ตัดตัวแปรกวนทีละตัว" ด้านล่าง)
+            </p>
+          </article>
+
+          <article class="panel wide">
+            <div class="panel-head">
+              <div>
                 <h2>ภาพรวมข้อมูลต้นทาง: 6 ตาราง</h2>
                 <p class="note">
                   วิเคราะห์แต่ละตารางแยกกันก่อน แล้วค่อยเอามารวมหาความสัมพันธ์ร่วมกันในหัวข้อถัดๆ ไปของหน้านี้
