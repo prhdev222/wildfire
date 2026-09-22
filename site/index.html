@@ -357,6 +357,40 @@
       .province-shape:hover {
         stroke: var(--ink);
         stroke-width: 1.4;
+        cursor: pointer;
+      }
+
+      .province-shape.selected {
+        stroke: var(--ember);
+        stroke-width: 2.4;
+      }
+
+      .thai-map-holder {
+        position: relative;
+      }
+
+      .map-tooltip {
+        position: absolute;
+        pointer-events: none;
+        background: var(--ink);
+        color: var(--paper);
+        font-size: 12px;
+        font-weight: 700;
+        padding: 6px 10px;
+        border-radius: 6px;
+        white-space: nowrap;
+        transform: translate(-50%, -115%);
+        z-index: 10;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+      }
+
+      .map-selected-info {
+        background: var(--control);
+        border-radius: 6px;
+        padding: 8px 10px;
+        margin-bottom: 10px;
+        font-weight: 700;
+        color: var(--ink);
       }
 
       .map-note {
@@ -1337,18 +1371,22 @@
           .slice(0, 5);
         document.querySelector("#mapChart").innerHTML = `
           <div class="map-wrap">
-            <svg class="thai-map" viewBox="0 0 ${width} ${height}" role="img" aria-label="Thailand province choropleth map">
-              ${features
-                .map((feature) => {
-                  const row = rowByProvince[normName(feature.properties.pro_en)];
-                  const value = row ? metricValue(row, metric) : null;
-                  const fill = colorScale(value, values);
-                  const label = `${feature.properties.pro_en}: ${fmt(value, 2)} ${metricDefs[metric].unit}`;
-                  return `<path class="province-shape" d="${geometryPath(feature.geometry, project)}" fill="${fill}"><title>${label}</title></path>`;
-                })
-                .join("")}
-            </svg>
+            <div class="thai-map-holder">
+              <svg class="thai-map" viewBox="0 0 ${width} ${height}" role="img" aria-label="Thailand province choropleth map">
+                ${features
+                  .map((feature) => {
+                    const row = rowByProvince[normName(feature.properties.pro_en)];
+                    const value = row ? metricValue(row, metric) : null;
+                    const fill = colorScale(value, values);
+                    const label = `${feature.properties.pro_en}: ${fmt(value, 2)} ${metricDefs[metric].unit}`;
+                    return `<path class="province-shape" data-info="${label}" d="${geometryPath(feature.geometry, project)}" fill="${fill}"></path>`;
+                  })
+                  .join("")}
+              </svg>
+              <div class="map-tooltip" id="mapTooltip" hidden></div>
+            </div>
             <div class="map-note">
+              <p id="mapSelectedInfo" class="map-selected-info" hidden></p>
               <p><strong>${metricDefs[metric].label}</strong> by province for <strong>${yearSelect.value}</strong>.</p>
               <p style="margin-top:8px">Top provinces:</p>
               <table style="margin-top:6px">
@@ -1358,6 +1396,28 @@
               </table>
             </div>
           </div>`;
+
+        const holder = document.querySelector(".thai-map-holder");
+        const tooltip = document.querySelector("#mapTooltip");
+        const selectedInfo = document.querySelector("#mapSelectedInfo");
+        holder.querySelectorAll(".province-shape").forEach((el) => {
+          el.addEventListener("mousemove", (e) => {
+            const rect = holder.getBoundingClientRect();
+            tooltip.textContent = el.dataset.info;
+            tooltip.style.left = `${e.clientX - rect.left}px`;
+            tooltip.style.top = `${e.clientY - rect.top}px`;
+            tooltip.hidden = false;
+          });
+          el.addEventListener("mouseleave", () => {
+            tooltip.hidden = true;
+          });
+          el.addEventListener("click", () => {
+            holder.querySelectorAll(".province-shape.selected").forEach((p) => p.classList.remove("selected"));
+            el.classList.add("selected");
+            selectedInfo.textContent = `เลือก: ${el.dataset.info}`;
+            selectedInfo.hidden = false;
+          });
+        });
       }
 
       function linearFit(points, xKey, yKey) {
